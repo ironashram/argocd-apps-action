@@ -1,4 +1,4 @@
-﻿name: "ArgoCD Apps Action"
+name: "ArgoCD Apps Action"
 description: "Github Action to update ArgoCD Applications"
 inputs:
   target_branch:
