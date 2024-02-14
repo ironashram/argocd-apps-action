@@ -1,0 +1,22 @@
+﻿name: "ArgoCD Apps Action"
+description: "Github Action to update ArgoCD Applications"
+inputs:
+  target_branch:
+    description: "target branch"
+    required: false
+    default: "main"
+  create_pr:
+    description: "create a PR if there are new updates"
+    required: false
+    default: "true"
+  apps_folder:
+    description: "folder to look for the app of apps"
+    required: false
+    default: "apps"
+runs:
+  using: docker
+  image: "quay.io/m1k_cloud/argocd-apps-action:latest"
+  args:
+    - ${{ inputs.target_branch }}
+    - ${{ inputs.create_pr }}
+    - ${{ inputs.apps_folder }}
