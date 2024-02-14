@@ -1,4 +1,4 @@
-## ArgoCd Apps Action
+## ArgoCD Apps Action
 This GitHub Action checks for updates in the specified directory of YAML files. It's written in Go and uses the `gopkg.in/yaml.v2` package to parse YAML files and the `github.com/sethvargo/go-githubactions` package for GitHub Actions specific functionalities.
 
 ## How it works
