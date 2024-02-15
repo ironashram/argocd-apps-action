@@ -1,17 +1,28 @@
 package main
 
 import (
+	"context"
+	"fmt"
 	"io"
+	"os"
+	"path"
+	"path/filepath"
+	"strconv"
+	"strings"
+	"time"
+
+	"net/http"
+
+	githttp "github.com/go-git/go-git/v5/plumbing/transport/http"
 
 	"github.com/Masterminds/semver"
+	"github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/config"
+	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/go-git/go-git/v5/plumbing/object"
+	"github.com/google/go-github/v33/github"
 	"github.com/sethvargo/go-githubactions"
-
-	"fmt"
-	"net/http"
-	"path/filepath"
-
-	"os"
-
+	"golang.org/x/oauth2"
 	"gopkg.in/yaml.v2"
 )
 
@@ -65,7 +76,7 @@ func getHTTPResponse(url string) ([]byte, error) {
 	return body, nil
 }
 
-func processFile(path string) error {
+func processFile(path string, repo *git.Repository, githubClient *github.Client, baseBranch string, createPr bool) error {
 	app, err := readAndParseYAML(path)
 	if err != nil {
 		return err
@@ -106,6 +117,45 @@ func processFile(path string) error {
 
 	if newest != nil {
 		fmt.Printf("There is a newer %s version: %s\n", chart, newest)
+
+		if createPr {
+			branchName := "update-" + chart
+			err = createNewBranch(repo, branchName)
+			if err != nil {
+				return err
+			}
+
+			app.Spec.Source.TargetRevision = newest.String()
+			newData, err := yaml.Marshal(app)
+			if err != nil {
+				return err
+			}
+
+			err = os.WriteFile(path, newData, 0644)
+			if err != nil {
+				return err
+			}
+
+			commitMessage := "Update " + chart + " to version " + newest.String()
+			err = commitChanges(repo, path, commitMessage)
+			if err != nil {
+				return err
+			}
+
+			err = pushChanges(repo, branchName)
+			if err != nil {
+				return err
+			}
+
+			prTitle := "Update " + chart + " to version " + newest.String()
+			prBody := "This PR updates " + chart + " to version " + newest.String()
+			err = createPullRequest(githubClient, baseBranch, branchName, prTitle, prBody)
+			if err != nil {
+				return err
+			}
+		} else {
+			fmt.Printf("Create PR is disabled, skipping PR creation for %s\n", chart)
+		}
 	} else {
 		fmt.Printf("No newer version of %s is available\n", chart)
 	}
@@ -113,7 +163,7 @@ func processFile(path string) error {
 	return nil
 }
 
-func checkForUpdates(dir string) error {
+func checkForUpdates(dir string, repo *git.Repository, githubClient *github.Client, baseBranch string, createPr bool) error {
 	dir = filepath.Clean(dir)
 
 	var walkErr error
@@ -123,7 +173,7 @@ func checkForUpdates(dir string) error {
 		}
 
 		if filepath.Ext(path) == ".yaml" {
-			err := processFile(path)
+			err := processFile(path, repo, githubClient, baseBranch, createPr)
 			if err != nil {
 				return err
 			}
@@ -162,8 +212,132 @@ func getNewestVersion(targetVersion string, entries map[string][]struct {
 	return newest, nil
 }
 
+func createNewBranch(repo *git.Repository, branchName string) error {
+	headRef, err := repo.Head()
+	if err != nil {
+		return err
+	}
+
+	newBranchRefName := plumbing.NewBranchReferenceName(branchName)
+	err = repo.Storer.SetReference(plumbing.NewHashReference(newBranchRefName, headRef.Hash()))
+	if err != nil {
+		return err
+	}
+
+	worktree, err := repo.Worktree()
+	if err != nil {
+		return err
+	}
+
+	err = worktree.Checkout(&git.CheckoutOptions{
+		Branch: newBranchRefName,
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func commitChanges(repo *git.Repository, path string, commitMessage string) error {
+	worktree, err := repo.Worktree()
+	if err != nil {
+		return err
+	}
+
+	_, err = worktree.Add(path)
+	if err != nil {
+		return err
+	}
+
+	_, err = worktree.Commit(commitMessage, &git.CommitOptions{
+		Author: &object.Signature{
+			Name:  "github-actions[bot]",
+			Email: "41898282+github-actions[bot]@users.noreply.github.com",
+			When:  time.Now(),
+		},
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func pushChanges(repo *git.Repository, branchName string) error {
+	err := repo.Push(&git.PushOptions{
+		Auth: &githttp.BasicAuth{
+			Username: "github-actions[bot]",
+			Password: os.Getenv("GITHUB_TOKEN"),
+		},
+		RefSpecs: []config.RefSpec{config.RefSpec(branchName + ":" + branchName)},
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func createPullRequest(githubClient *github.Client, baseBranch string, newBranch string, title string, body string) error {
+	ctx := context.Background()
+	ts := oauth2.StaticTokenSource(
+		&oauth2.Token{AccessToken: os.Getenv("GITHUB_TOKEN")},
+	)
+	ctx = context.WithValue(ctx, oauth2.HTTPClient, &http.Client{})
+	tc := oauth2.NewClient(ctx, ts)
+
+	client := github.NewClient(tc)
+
+	newPR := &github.NewPullRequest{
+		Title:               github.String(title),
+		Head:                github.String(newBranch),
+		Base:                github.String(baseBranch),
+		Body:                github.String(body),
+		MaintainerCanModify: github.Bool(true),
+	}
+
+	_, _, err := client.PullRequests.Create(ctx, "your-username", "your-repo", newPR)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func main() {
-	err := checkForUpdates("/home/m1k/Documents/github/kub1k/apps/templates")
+	targetBranch := os.Args[1]
+	createPrStr := os.Args[2]
+	appsFolder := os.Args[3]
+
+	createPr, err := strconv.ParseBool(createPrStr)
+	if err != nil {
+		fmt.Println("Error parsing createPr:", err)
+		return
+	}
+
+	fmt.Println("Target Branch: ", targetBranch)
+	fmt.Println("Create PR: ", createPr)
+	fmt.Println("Apps Folder: ", appsFolder)
+	
+	repoName := strings.Split(os.Getenv("GITHUB_REPOSITORY"), "/")[1]
+	repoPath := path.Join(os.Getenv("GITHUB_WORKSPACE"), repoName)
+
+	repo, err := git.PlainOpen(repoPath)
+	if err != nil {
+		githubactions.Fatalf("error: %v", err)
+	}
+
+	ctx := context.Background()
+	ts := oauth2.StaticTokenSource(
+		&oauth2.Token{AccessToken: os.Getenv("GITHUB_TOKEN")},
+	)
+	ctx = context.WithValue(ctx, oauth2.HTTPClient, &http.Client{})
+	tc := oauth2.NewClient(ctx, ts)
+
+	githubClient := github.NewClient(tc)
+
+	err = checkForUpdates(appsFolder, repo, githubClient, targetBranch, createPr)
 	if err != nil {
 		githubactions.Fatalf("error: %v", err)
 	}
