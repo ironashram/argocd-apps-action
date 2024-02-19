@@ -1,4 +1,4 @@
-package main
+package updater
 
 import (
 	"context"
@@ -7,13 +7,13 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"strconv"
-	"strings"
 	"time"
 
 	"net/http"
 
 	githttp "github.com/go-git/go-git/v5/plumbing/transport/http"
+	actionconfig "github.com/ironashram/argocd-apps-action/config"
+	githubactions "github.com/sethvargo/go-githubactions"
 
 	"github.com/Masterminds/semver"
 	"github.com/go-git/go-git/v5"
@@ -21,7 +21,7 @@ import (
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/google/go-github/v33/github"
-	"github.com/sethvargo/go-githubactions"
+
 	"golang.org/x/oauth2"
 	"gopkg.in/yaml.v2"
 )
@@ -76,7 +76,7 @@ func getHTTPResponse(url string) ([]byte, error) {
 	return body, nil
 }
 
-func processFile(path string, repo *git.Repository, githubClient *github.Client, baseBranch string, createPr bool) error {
+func processFile(path string, repo *git.Repository, githubClient *github.Client, cfg *actionconfig.Config) error {
 	app, err := readAndParseYAML(path)
 	if err != nil {
 		return err
@@ -118,7 +118,7 @@ func processFile(path string, repo *git.Repository, githubClient *github.Client,
 	if newest != nil {
 		fmt.Printf("There is a newer %s version: %s\n", chart, newest)
 
-		if createPr {
+		if cfg.CreatePr {
 			branchName := "update-" + chart
 			err = createNewBranch(repo, branchName)
 			if err != nil {
@@ -142,14 +142,14 @@ func processFile(path string, repo *git.Repository, githubClient *github.Client,
 				return err
 			}
 
-			err = pushChanges(repo, branchName)
+			err = pushChanges(repo, branchName, cfg)
 			if err != nil {
 				return err
 			}
 
 			prTitle := "Update " + chart + " to version " + newest.String()
 			prBody := "This PR updates " + chart + " to version " + newest.String()
-			err = createPullRequest(githubClient, baseBranch, branchName, prTitle, prBody)
+			err = createPullRequest(githubClient, cfg.TargetBranch, branchName, prTitle, prBody)
 			if err != nil {
 				return err
 			}
@@ -163,8 +163,8 @@ func processFile(path string, repo *git.Repository, githubClient *github.Client,
 	return nil
 }
 
-func checkForUpdates(dir string, repo *git.Repository, githubClient *github.Client, baseBranch string, createPr bool) error {
-	dir = filepath.Clean(dir)
+func checkForUpdates(repo *git.Repository, githubClient *github.Client, cfg *actionconfig.Config) error {
+	dir := path.Join(cfg.Workspace, cfg.AppsFolder)
 
 	var walkErr error
 	filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
@@ -173,7 +173,7 @@ func checkForUpdates(dir string, repo *git.Repository, githubClient *github.Clie
 		}
 
 		if filepath.Ext(path) == ".yaml" {
-			err := processFile(path, repo, githubClient, baseBranch, createPr)
+			err := processFile(path, repo, githubClient, cfg)
 			if err != nil {
 				return err
 			}
@@ -264,11 +264,11 @@ func commitChanges(repo *git.Repository, path string, commitMessage string) erro
 	return nil
 }
 
-func pushChanges(repo *git.Repository, branchName string) error {
+func pushChanges(repo *git.Repository, branchName string, cfg *actionconfig.Config) error {
 	err := repo.Push(&git.PushOptions{
 		Auth: &githttp.BasicAuth{
 			Username: "github-actions[bot]",
-			Password: os.Getenv("GITHUB_TOKEN"),
+			Password: cfg.Token,
 		},
 		RefSpecs: []config.RefSpec{config.RefSpec(branchName + ":" + branchName)},
 	})
@@ -280,9 +280,10 @@ func pushChanges(repo *git.Repository, branchName string) error {
 }
 
 func createPullRequest(githubClient *github.Client, baseBranch string, newBranch string, title string, body string) error {
+
 	ctx := context.Background()
 	ts := oauth2.StaticTokenSource(
-		&oauth2.Token{AccessToken: os.Getenv("GITHUB_TOKEN")},
+		&oauth2.Token{AccessToken: githubactions.GetInput("token")},
 	)
 	ctx = context.WithValue(ctx, oauth2.HTTPClient, &http.Client{})
 	tc := oauth2.NewClient(ctx, ts)
@@ -297,7 +298,7 @@ func createPullRequest(githubClient *github.Client, baseBranch string, newBranch
 		MaintainerCanModify: github.Bool(true),
 	}
 
-	_, _, err := client.PullRequests.Create(ctx, "your-username", "your-repo", newPR)
+	_, _, err := client.PullRequests.Create(ctx, githubactions.GetInput("owner"), githubactions.GetInput("repo"), newPR)
 	if err != nil {
 		return err
 	}
@@ -305,40 +306,27 @@ func createPullRequest(githubClient *github.Client, baseBranch string, newBranch
 	return nil
 }
 
-func main() {
-	targetBranch := os.Args[1]
-	createPrStr := os.Args[2]
-	appsFolder := os.Args[3]
+func StartUpdate(ctx context.Context, cfg *actionconfig.Config, action *githubactions.Action) error {
 
-	createPr, err := strconv.ParseBool(createPrStr)
-	if err != nil {
-		fmt.Println("Error parsing createPr:", err)
-		return
-	}
-
-	fmt.Println("Target Branch: ", targetBranch)
-	fmt.Println("Create PR: ", createPr)
-	fmt.Println("Apps Folder: ", appsFolder)
-	
-	repoName := strings.Split(os.Getenv("GITHUB_REPOSITORY"), "/")[1]
-	repoPath := path.Join(os.Getenv("GITHUB_WORKSPACE"), repoName)
+	repoPath := path.Join(cfg.Workspace, cfg.Repo)
 
 	repo, err := git.PlainOpen(repoPath)
 	if err != nil {
-		githubactions.Fatalf("error: %v", err)
+		action.Fatalf("error: %v", err)
 	}
 
-	ctx := context.Background()
 	ts := oauth2.StaticTokenSource(
-		&oauth2.Token{AccessToken: os.Getenv("GITHUB_TOKEN")},
+		&oauth2.Token{AccessToken: cfg.Token},
 	)
 	ctx = context.WithValue(ctx, oauth2.HTTPClient, &http.Client{})
 	tc := oauth2.NewClient(ctx, ts)
 
 	githubClient := github.NewClient(tc)
 
-	err = checkForUpdates(appsFolder, repo, githubClient, targetBranch, createPr)
+	err = checkForUpdates(repo, githubClient, cfg)
 	if err != nil {
-		githubactions.Fatalf("error: %v", err)
+		action.Fatalf("error: %v", err)
 	}
+
+	return nil
 }
