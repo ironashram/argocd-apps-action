@@ -12,8 +12,7 @@ import (
 	"net/http"
 
 	githttp "github.com/go-git/go-git/v5/plumbing/transport/http"
-	actionconfig "github.com/ironashram/argocd-apps-action/config"
-	githubactions "github.com/sethvargo/go-githubactions"
+	"github.com/ironashram/argocd-apps-action/internal"
 
 	"github.com/Masterminds/semver"
 	"github.com/go-git/go-git/v5"
@@ -26,38 +25,22 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-type Application struct {
-	Spec struct {
-		Source struct {
-			Chart          string `yaml:"chart"`
-			RepoURL        string `yaml:"repoURL"`
-			TargetRevision string `yaml:"targetRevision"`
-		} `yaml:"source"`
-	} `yaml:"spec"`
-}
-
-type Index struct {
-	Entries map[string][]struct {
-		Version string `yaml:"version"`
-	} `yaml:"entries"`
-}
-
-func readAndParseYAML(path string) (Application, error) {
+var readAndParseYAML = func(path string) (*internal.Application, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return Application{}, err
+		return nil, err
 	}
 
-	var app Application
+	var app internal.Application
 	err = yaml.Unmarshal(data, &app)
 	if err != nil {
-		return Application{}, err
+		return nil, err
 	}
 
-	return app, nil
+	return &app, nil
 }
 
-func getHTTPResponse(url string) ([]byte, error) {
+var getHTTPResponse = func(url string) ([]byte, error) {
 	resp, err := http.Get(url)
 	if err != nil {
 		return nil, err
@@ -76,7 +59,7 @@ func getHTTPResponse(url string) ([]byte, error) {
 	return body, nil
 }
 
-func processFile(path string, repo *git.Repository, githubClient *github.Client, cfg *actionconfig.Config, action *githubactions.Action) error {
+var processFile = func(path string, repo *git.Repository, githubClient *github.Client, cfg *internal.Config, action internal.ActionInterface) error {
 	app, err := readAndParseYAML(path)
 	if err != nil {
 		return err
@@ -98,7 +81,7 @@ func processFile(path string, repo *git.Repository, githubClient *github.Client,
 		return err
 	}
 
-	var index Index
+	var index internal.Index
 	err = yaml.Unmarshal(body, &index)
 	if err != nil {
 		return err
@@ -149,7 +132,7 @@ func processFile(path string, repo *git.Repository, githubClient *github.Client,
 
 			prTitle := "Update " + chart + " to version " + newest.String()
 			prBody := "This PR updates " + chart + " to version " + newest.String()
-			err = createPullRequest(githubClient, cfg.TargetBranch, branchName, prTitle, prBody)
+			err = createPullRequest(githubClient, cfg.TargetBranch, branchName, prTitle, prBody, action)
 			if err != nil {
 				return err
 			}
@@ -159,60 +142,10 @@ func processFile(path string, repo *git.Repository, githubClient *github.Client,
 	} else {
 		action.Debugf("No newer version of %s is available\n", chart)
 	}
-
 	return nil
 }
 
-func checkForUpdates(repo *git.Repository, githubClient *github.Client, cfg *actionconfig.Config, action *githubactions.Action) error {
-	dir := path.Join(cfg.Workspace, cfg.AppsFolder)
-
-	var walkErr error
-	filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-
-		if filepath.Ext(path) == ".yaml" {
-			err := processFile(path, repo, githubClient, cfg, action)
-			if err != nil {
-				return err
-			}
-		}
-
-		return nil
-	})
-
-	return walkErr
-}
-
-func getNewestVersion(targetVersion string, entries map[string][]struct {
-	Version string `yaml:"version"`
-}) (*semver.Version, error) {
-	target, err := semver.NewVersion(targetVersion)
-	if err != nil {
-		return nil, err
-	}
-
-	var newest *semver.Version
-	for _, entry := range entries {
-		for _, version := range entry {
-			upstream, err := semver.NewVersion(version.Version)
-			if err != nil {
-				return nil, err
-			}
-
-			if target.LessThan(upstream) {
-				if newest == nil || newest.LessThan(upstream) {
-					newest = upstream
-				}
-			}
-		}
-	}
-
-	return newest, nil
-}
-
-func createNewBranch(repo *git.Repository, branchName string) error {
+var createNewBranch = func(repo *git.Repository, branchName string) error {
 	headRef, err := repo.Head()
 	if err != nil {
 		return err
@@ -239,7 +172,7 @@ func createNewBranch(repo *git.Repository, branchName string) error {
 	return nil
 }
 
-func commitChanges(repo *git.Repository, path string, commitMessage string) error {
+var commitChanges = func(repo *git.Repository, path string, commitMessage string) error {
 	worktree, err := repo.Worktree()
 	if err != nil {
 		return err
@@ -260,11 +193,10 @@ func commitChanges(repo *git.Repository, path string, commitMessage string) erro
 	if err != nil {
 		return err
 	}
-
 	return nil
 }
 
-func pushChanges(repo *git.Repository, branchName string, cfg *actionconfig.Config) error {
+var pushChanges = func(repo *git.Repository, branchName string, cfg *internal.Config) error {
 	err := repo.Push(&git.PushOptions{
 		Auth: &githttp.BasicAuth{
 			Username: "github-actions[bot]",
@@ -275,15 +207,14 @@ func pushChanges(repo *git.Repository, branchName string, cfg *actionconfig.Conf
 	if err != nil {
 		return err
 	}
-
 	return nil
 }
 
-func createPullRequest(githubClient *github.Client, baseBranch string, newBranch string, title string, body string) error {
+var createPullRequest = func(githubClient *github.Client, baseBranch string, newBranch string, title string, body string, action internal.ActionInterface) error {
 
 	ctx := context.Background()
 	ts := oauth2.StaticTokenSource(
-		&oauth2.Token{AccessToken: githubactions.GetInput("token")},
+		&oauth2.Token{AccessToken: action.GetInput("token")},
 	)
 	ctx = context.WithValue(ctx, oauth2.HTTPClient, &http.Client{})
 	tc := oauth2.NewClient(ctx, ts)
@@ -298,7 +229,7 @@ func createPullRequest(githubClient *github.Client, baseBranch string, newBranch
 		MaintainerCanModify: github.Bool(true),
 	}
 
-	_, _, err := client.PullRequests.Create(ctx, githubactions.GetInput("owner"), githubactions.GetInput("repo"), newPR)
+	_, _, err := client.PullRequests.Create(ctx, action.GetInput("owner"), action.GetInput("repo"), newPR)
 	if err != nil {
 		return err
 	}
@@ -306,7 +237,56 @@ func createPullRequest(githubClient *github.Client, baseBranch string, newBranch
 	return nil
 }
 
-func StartUpdate(ctx context.Context, cfg *actionconfig.Config, action *githubactions.Action) error {
+var checkForUpdates = func(repo *git.Repository, githubClient *github.Client, cfg *internal.Config, action internal.ActionInterface) error {
+	dir := path.Join(cfg.Workspace, cfg.AppsFolder)
+
+	var walkErr error
+	filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if filepath.Ext(path) == ".yaml" {
+			err := processFile(path, repo, githubClient, cfg, action)
+			if err != nil {
+				return err
+			}
+		}
+
+		return nil
+	})
+
+	return walkErr
+}
+
+var getNewestVersion = func(targetVersion string, entries map[string][]struct {
+	Version string `yaml:"version"`
+}) (*semver.Version, error) {
+	target, err := semver.NewVersion(targetVersion)
+	if err != nil {
+		return nil, err
+	}
+
+	var newest *semver.Version
+	for _, entry := range entries {
+		for _, version := range entry {
+			upstream, err := semver.NewVersion(version.Version)
+			if err != nil {
+				return nil, err
+			}
+
+			if target.LessThan(upstream) {
+				if newest == nil || newest.LessThan(upstream) {
+					newest = upstream
+				}
+			}
+		}
+	}
+
+	return newest, nil
+}
+
+func StartUpdate(ctx context.Context, cfg *internal.Config, action internal.ActionInterface) error {
 
 	repoPath := path.Join(cfg.Workspace)
 

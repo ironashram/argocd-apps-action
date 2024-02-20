@@ -1,22 +1,13 @@
-package updater
+package config
 
 import (
 	"fmt"
 	"strconv"
 
-	githubactions "github.com/sethvargo/go-githubactions"
+	"github.com/ironashram/argocd-apps-action/internal"
 )
 
-type Config struct {
-	TargetBranch string
-	CreatePr     bool
-	AppsFolder   string
-	Token        string
-	Repo         string
-	Workspace    string
-}
-
-func NewFromInputs(action *githubactions.Action) (*Config, error) {
+func NewFromInputs(action internal.ActionInterface) (*internal.Config, error) {
 	targetBranch := action.GetInput("target_branch")
 	createPrStr := action.GetInput("create_pr")
 	appsFolder := action.GetInput("apps_folder")
@@ -35,7 +26,7 @@ func NewFromInputs(action *githubactions.Action) (*Config, error) {
 	action.Debugf("create_pr: %v", createPr)
 	action.Debugf("apps_folder: %s", appsFolder)
 
-	c := Config{
+	c := internal.Config{
 		TargetBranch: targetBranch,
 		CreatePr:     createPr,
 		AppsFolder:   appsFolder,
