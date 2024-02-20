@@ -76,7 +76,7 @@ func getHTTPResponse(url string) ([]byte, error) {
 	return body, nil
 }
 
-func processFile(path string, repo *git.Repository, githubClient *github.Client, cfg *actionconfig.Config) error {
+func processFile(path string, repo *git.Repository, githubClient *github.Client, cfg *actionconfig.Config, action *githubactions.Action) error {
 	app, err := readAndParseYAML(path)
 	if err != nil {
 		return err
@@ -87,11 +87,11 @@ func processFile(path string, repo *git.Repository, githubClient *github.Client,
 	targetRevision := app.Spec.Source.TargetRevision
 
 	if chart == "" || url == "" || targetRevision == "" {
-		fmt.Printf("Skipping invalid application manifest %s\n", path)
+		action.Debugf("Skipping invalid application manifest %s\n", path)
 		return nil
 	}
 
-	fmt.Printf("Checking %s from %s, current version is %s\n", chart, url, targetRevision)
+	action.Debugf("Checking %s from %s, current version is %s\n", chart, url, targetRevision)
 
 	body, err := getHTTPResponse(url)
 	if err != nil {
@@ -105,18 +105,18 @@ func processFile(path string, repo *git.Repository, githubClient *github.Client,
 	}
 
 	if _, ok := index.Entries[chart]; !ok || len(index.Entries[chart]) == 0 {
-		fmt.Printf("Chart entry %s does not exist or is empty at %s\n", chart, url)
+		action.Debugf("Chart entry %s does not exist or is empty at %s\n", chart, url)
 		return nil
 	}
 
 	newest, err := getNewestVersion(targetRevision, index.Entries)
 	if err != nil {
-		fmt.Printf("Error comparing versions: %v\n", err)
+		action.Debugf("Error comparing versions: %v\n", err)
 		return err
 	}
 
 	if newest != nil {
-		fmt.Printf("There is a newer %s version: %s\n", chart, newest)
+		action.Debugf("There is a newer %s version: %s\n", chart, newest)
 
 		if cfg.CreatePr {
 			branchName := "update-" + chart
@@ -154,16 +154,16 @@ func processFile(path string, repo *git.Repository, githubClient *github.Client,
 				return err
 			}
 		} else {
-			fmt.Printf("Create PR is disabled, skipping PR creation for %s\n", chart)
+			action.Debugf("Create PR is disabled, skipping PR creation for %s\n", chart)
 		}
 	} else {
-		fmt.Printf("No newer version of %s is available\n", chart)
+		action.Debugf("No newer version of %s is available\n", chart)
 	}
 
 	return nil
 }
 
-func checkForUpdates(repo *git.Repository, githubClient *github.Client, cfg *actionconfig.Config) error {
+func checkForUpdates(repo *git.Repository, githubClient *github.Client, cfg *actionconfig.Config, action *githubactions.Action) error {
 	dir := path.Join(cfg.Workspace, cfg.AppsFolder)
 
 	var walkErr error
@@ -173,7 +173,7 @@ func checkForUpdates(repo *git.Repository, githubClient *github.Client, cfg *act
 		}
 
 		if filepath.Ext(path) == ".yaml" {
-			err := processFile(path, repo, githubClient, cfg)
+			err := processFile(path, repo, githubClient, cfg, action)
 			if err != nil {
 				return err
 			}
@@ -308,7 +308,7 @@ func createPullRequest(githubClient *github.Client, baseBranch string, newBranch
 
 func StartUpdate(ctx context.Context, cfg *actionconfig.Config, action *githubactions.Action) error {
 
-	repoPath := path.Join(cfg.Workspace, cfg.Repo)
+	repoPath := path.Join(cfg.Workspace)
 
 	repo, err := git.PlainOpen(repoPath)
 	if err != nil {
@@ -323,7 +323,7 @@ func StartUpdate(ctx context.Context, cfg *actionconfig.Config, action *githubac
 
 	githubClient := github.NewClient(tc)
 
-	err = checkForUpdates(repo, githubClient, cfg)
+	err = checkForUpdates(repo, githubClient, cfg, action)
 	if err != nil {
 		action.Fatalf("error: %v", err)
 	}
