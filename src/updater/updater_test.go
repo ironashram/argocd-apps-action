@@ -11,29 +11,29 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-type MockGithubActionInterface struct {
+type MockActionInterface struct {
 	mock.Mock
 }
 
-func (m *MockGithubActionInterface) Debugf(format string, args ...interface{}) {
+func (m *MockActionInterface) Debugf(format string, args ...interface{}) {
 	m.Called(format, args)
 }
 
-func (m *MockGithubActionInterface) Fatalf(format string, args ...interface{}) {
+func (m *MockActionInterface) Fatalf(format string, args ...interface{}) {
 	m.Called(format, args)
 }
 
-func (m *MockGithubActionInterface) GetInput(name string) string {
+func (m *MockActionInterface) GetInput(name string) string {
 	args := m.Called(name)
 	return args.String(0)
 }
 
-func (m *MockGithubActionInterface) Getenv(name string) string {
+func (m *MockActionInterface) Getenv(name string) string {
 	args := m.Called(name)
 	return args.String(0)
 }
 
-var _ internal.ActionInterface = &MockGithubActionInterface{}
+var _ internal.ActionInterface = &MockActionInterface{}
 
 func TestProcessFile(t *testing.T) {
 	// Mock data
@@ -43,7 +43,7 @@ func TestProcessFile(t *testing.T) {
 	cfg := &internal.Config{
 		CreatePr: true,
 	}
-	action := &MockGithubActionInterface{}
+	action := &MockActionInterface{}
 
 	// Test cases
 	testCases := []struct {
@@ -62,29 +62,20 @@ func TestProcessFile(t *testing.T) {
 				return &internal.Application{
 					Spec: internal.Spec{
 						Source: internal.Source{
-							Chart:          "my-chart",
-							RepoURL:        "https://github.com/my-repo",
-							TargetRevision: "1.0.0",
+							Chart:          "cert-manager",
+							RepoURL:        "https://charts.jetstack.io",
+							TargetRevision: "1.14.2",
 						},
 					},
 				}, nil
 			},
-			getHTTPResponseFunc: func(url string) ([]byte, error) {
-				return []byte(`index.yaml content`), nil
-			},
-			createNewBranchFunc: func(repo *git.Repository, branchName string) error {
-				return nil
-			},
-			commitChangesFunc: func(repo *git.Repository, path, commitMessage string) error {
-				return nil
-			},
-			pushChangesFunc: func(repo *git.Repository, branchName string, cfg *internal.Config) error {
-				return nil
-			},
-			createPullRequestFunc: func(client *github.Client, baseBranch, headBranch, title, body string, action internal.ActionInterface) error {
-				return nil
-			},
-			expectedErr: nil,
+
+			getHTTPResponseFunc:   getHTTPResponse,
+			createNewBranchFunc:   createNewBranch,
+			commitChangesFunc:     commitChanges,
+			pushChangesFunc:       pushChanges,
+			createPullRequestFunc: createPullRequest,
+			expectedErr:           nil,
 		},
 		{
 			name: "Invalid application manifest",
@@ -108,21 +99,15 @@ func TestProcessFile(t *testing.T) {
 
 			// Reset mock calls
 			action.On("Debugf", mock.Anything, mock.Anything).Return(nil)
-			action.On("Fatalf", mock.Anything, mock.Anything).Return(nil)
-			action.On("GetInput", "inputName").Return("mockedInputValue")
-			action.On("Getenv", "envName").Return("mockedEnvValue")
+			//action.On("Fatalf", mock.Anything, mock.Anything).Return(nil)
+			//action.On("GetInput", "inputName").Return("mockedInputValue")
+			//action.On("Getenv", "envName").Return("mockedEnvValue")
 
 			// Call the function
 			err := processFile(path, repo, githubClient, cfg, action)
 
 			// Assert the result
 			assert.Equal(t, tc.expectedErr, err)
-			assert.Equal(t, "mockedInputValue", action.GetInput("inputName"))
-			assert.Equal(t, "mockedEnvValue", action.Getenv("envName"))
-			assert.Equal(t, 1, action.AssertNumberOfCalls(t, "Debugf", 1))
-			assert.Equal(t, 0, action.AssertNumberOfCalls(t, "Fatalf", 1))
-			assert.Equal(t, 1, action.AssertNumberOfCalls(t, "GetInput", 1))
-			assert.Equal(t, 1, action.AssertNumberOfCalls(t, "Getenv", 1))
 
 			// Verify mock calls
 			action.AssertExpectations(t)

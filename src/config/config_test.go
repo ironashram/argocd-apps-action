@@ -72,36 +72,36 @@ func TestConfig(t *testing.T) {
 	}
 }
 
-type MockActionInputs struct {
+type MockActionInterface struct {
 	Inputs map[string]string
 	Env    map[string]string
 }
 
-func (m MockActionInputs) GetInput(name string) string {
+func (m MockActionInterface) GetInput(name string) string {
 	return m.Inputs[name]
 }
 
-func (m MockActionInputs) Getenv(name string) string {
+func (m MockActionInterface) Getenv(name string) string {
 	return m.Env[name]
 }
 
-func (m MockActionInputs) Debugf(format string, args ...interface{}) {
+func (m MockActionInterface) Debugf(format string, args ...interface{}) {
 }
 
-func (m MockActionInputs) Fatalf(format string, args ...interface{}) {
+func (m MockActionInterface) Fatalf(format string, args ...interface{}) {
 }
 
 func TestNewFromInputs(t *testing.T) {
 	// Test cases
 	testCases := []struct {
 		name        string
-		action      MockActionInputs
+		action      MockActionInterface
 		expected    *internal.Config
 		expectedErr error
 	}{
 		{
 			name: "Test Case 1",
-			action: MockActionInputs{
+			action: MockActionInterface{
 				Inputs: map[string]string{
 					"target_branch": "main",
 					"create_pr":     "true",
@@ -125,7 +125,7 @@ func TestNewFromInputs(t *testing.T) {
 		},
 		{
 			name: "Test Case 2",
-			action: MockActionInputs{
+			action: MockActionInterface{
 				Inputs: map[string]string{
 					"target_branch": "develop",
 					"create_pr":     "false",
