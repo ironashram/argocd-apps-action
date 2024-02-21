@@ -19,7 +19,7 @@ import (
 	"github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
-	"github.com/google/go-github/v33/github"
+	"github.com/google/go-github/v59/github"
 
 	"golang.org/x/oauth2"
 	"gopkg.in/yaml.v2"

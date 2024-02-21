@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/go-git/go-git/v5"
-	"github.com/google/go-github/v33/github"
+	"github.com/google/go-github/v59/github"
 	"github.com/ironashram/argocd-apps-action/internal"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
