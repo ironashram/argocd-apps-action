@@ -36,3 +36,22 @@ func (g *GithubActionInterface) Debugf(format string, args ...interface{}) {
 func (g *GithubActionInterface) Fatalf(format string, args ...interface{}) {
 	g.action.Fatalf(format, args...)
 }
+
+type MockActionInterface struct {
+	Inputs map[string]string
+	Env    map[string]string
+}
+
+func (m MockActionInterface) GetInput(name string) string {
+	return m.Inputs[name]
+}
+
+func (m MockActionInterface) Getenv(name string) string {
+	return m.Env[name]
+}
+
+func (m MockActionInterface) Debugf(format string, args ...interface{}) {
+}
+
+func (m MockActionInterface) Fatalf(format string, args ...interface{}) {
+}
