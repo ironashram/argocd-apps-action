@@ -5,9 +5,10 @@ import (
 	"strconv"
 
 	"github.com/ironashram/argocd-apps-action/internal"
+	"github.com/ironashram/argocd-apps-action/models"
 )
 
-func NewFromInputs(action internal.ActionInterface) (*internal.Config, error) {
+func NewFromInputs(action internal.ActionInterface) (*models.Config, error) {
 	targetBranch := action.GetInput("target_branch")
 	createPrStr := action.GetInput("create_pr")
 	appsFolder := action.GetInput("apps_folder")
@@ -26,7 +27,7 @@ func NewFromInputs(action internal.ActionInterface) (*internal.Config, error) {
 	action.Debugf("create_pr: %v", createPr)
 	action.Debugf("apps_folder: %s", appsFolder)
 
-	c := internal.Config{
+	c := models.Config{
 		TargetBranch: targetBranch,
 		CreatePr:     createPr,
 		AppsFolder:   appsFolder,

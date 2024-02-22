@@ -1,4 +1,4 @@
-package updater
+package argoaction
 
 import (
 	"errors"
@@ -7,6 +7,7 @@ import (
 	"github.com/go-git/go-git/v5"
 	"github.com/google/go-github/v59/github"
 	"github.com/ironashram/argocd-apps-action/internal"
+	"github.com/ironashram/argocd-apps-action/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -40,7 +41,7 @@ func TestProcessFile(t *testing.T) {
 	path := "/path/to/file.yaml"
 	repo := &git.Repository{}
 	githubClient := &github.Client{}
-	cfg := &internal.Config{
+	cfg := &models.Config{
 		CreatePr: true,
 	}
 	action := &MockActionInterface{}
@@ -48,20 +49,20 @@ func TestProcessFile(t *testing.T) {
 	// Test cases
 	testCases := []struct {
 		name                  string
-		readAndParseYAMLFunc  func(path string) (*internal.Application, error)
+		readAndParseYAMLFunc  func(path string) (*models.Application, error)
 		getHTTPResponseFunc   func(url string) ([]byte, error)
 		createNewBranchFunc   func(repo *git.Repository, branchName string) error
 		commitChangesFunc     func(repo *git.Repository, path, commitMessage string) error
-		pushChangesFunc       func(repo *git.Repository, branchName string, cfg *internal.Config) error
+		pushChangesFunc       func(repo *git.Repository, branchName string, cfg *models.Config) error
 		createPullRequestFunc func(client *github.Client, baseBranch, headBranch, title, body string, action internal.ActionInterface) error
 		expectedErr           error
 	}{
 		{
 			name: "Valid application manifest",
-			readAndParseYAMLFunc: func(path string) (*internal.Application, error) {
-				return &internal.Application{
-					Spec: internal.Spec{
-						Source: internal.Source{
+			readAndParseYAMLFunc: func(path string) (*models.Application, error) {
+				return &models.Application{
+					Spec: models.Spec{
+						Source: models.Source{
 							Chart:          "cert-manager",
 							RepoURL:        "https://charts.jetstack.io",
 							TargetRevision: "1.14.2",
@@ -79,7 +80,7 @@ func TestProcessFile(t *testing.T) {
 		},
 		{
 			name: "Invalid application manifest",
-			readAndParseYAMLFunc: func(path string) (*internal.Application, error) {
+			readAndParseYAMLFunc: func(path string) (*models.Application, error) {
 				return nil, errors.New("failed to parse YAML")
 			},
 			expectedErr: errors.New("failed to parse YAML"),

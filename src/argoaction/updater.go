@@ -1,4 +1,4 @@
-package updater
+package argoaction
 
 import (
 	"context"
@@ -13,6 +13,7 @@ import (
 
 	githttp "github.com/go-git/go-git/v5/plumbing/transport/http"
 	"github.com/ironashram/argocd-apps-action/internal"
+	"github.com/ironashram/argocd-apps-action/models"
 
 	"github.com/Masterminds/semver"
 	"github.com/go-git/go-git/v5"
@@ -25,13 +26,13 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-var readAndParseYAML = func(path string) (*internal.Application, error) {
+var readAndParseYAML = func(path string) (*models.Application, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
 
-	var app internal.Application
+	var app models.Application
 	err = yaml.Unmarshal(data, &app)
 	if err != nil {
 		return nil, err
@@ -59,7 +60,7 @@ var getHTTPResponse = func(url string) ([]byte, error) {
 	return body, nil
 }
 
-var processFile = func(path string, repo *git.Repository, githubClient *github.Client, cfg *internal.Config, action internal.ActionInterface) error {
+var processFile = func(path string, repo *git.Repository, githubClient *github.Client, cfg *models.Config, action internal.ActionInterface) error {
 	app, err := readAndParseYAML(path)
 	if err != nil {
 		return err
@@ -81,7 +82,7 @@ var processFile = func(path string, repo *git.Repository, githubClient *github.C
 		return err
 	}
 
-	var index internal.Index
+	var index models.Index
 	err = yaml.Unmarshal(body, &index)
 	if err != nil {
 		return err
@@ -196,7 +197,7 @@ var commitChanges = func(repo *git.Repository, path string, commitMessage string
 	return nil
 }
 
-var pushChanges = func(repo *git.Repository, branchName string, cfg *internal.Config) error {
+var pushChanges = func(repo *git.Repository, branchName string, cfg *models.Config) error {
 	err := repo.Push(&git.PushOptions{
 		Auth: &githttp.BasicAuth{
 			Username: "github-actions[bot]",
@@ -237,7 +238,7 @@ var createPullRequest = func(githubClient *github.Client, baseBranch string, new
 	return nil
 }
 
-var checkForUpdates = func(repo *git.Repository, githubClient *github.Client, cfg *internal.Config, action internal.ActionInterface) error {
+var checkForUpdates = func(repo *git.Repository, githubClient *github.Client, cfg *models.Config, action internal.ActionInterface) error {
 	dir := path.Join(cfg.Workspace, cfg.AppsFolder)
 
 	var walkErr error
@@ -286,7 +287,7 @@ var getNewestVersion = func(targetVersion string, entries map[string][]struct {
 	return newest, nil
 }
 
-func StartUpdate(ctx context.Context, cfg *internal.Config, action internal.ActionInterface) error {
+func StartUpdate(ctx context.Context, cfg *models.Config, action internal.ActionInterface) error {
 
 	repoPath := path.Join(cfg.Workspace)
 

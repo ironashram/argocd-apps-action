@@ -5,7 +5,7 @@ import (
 
 	"github.com/ironashram/argocd-apps-action/config"
 	"github.com/ironashram/argocd-apps-action/internal"
-	"github.com/ironashram/argocd-apps-action/updater"
+	"github.com/ironashram/argocd-apps-action/argoaction"
 )
 
 func main() {
@@ -17,7 +17,7 @@ func main() {
 		action.Fatalf("Error parsing inputs: %v", err)
 	}
 
-	err = updater.StartUpdate(ctx, cfg, action)
+	err = argoaction.StartUpdate(ctx, cfg, action)
 	if err != nil {
 		action.Fatalf("Error starting action: %v", err)
 	}

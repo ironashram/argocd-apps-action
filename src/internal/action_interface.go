@@ -36,32 +36,3 @@ func (g *GithubActionInterface) Debugf(format string, args ...interface{}) {
 func (g *GithubActionInterface) Fatalf(format string, args ...interface{}) {
 	g.action.Fatalf(format, args...)
 }
-
-type Config struct {
-	TargetBranch string
-	CreatePr     bool
-	AppsFolder   string
-	Token        string
-	Repo         string
-	Workspace    string
-}
-
-type Source struct {
-	Chart          string `yaml:"chart"`
-	RepoURL        string `yaml:"repoURL"`
-	TargetRevision string `yaml:"targetRevision"`
-}
-
-type Spec struct {
-	Source Source `yaml:"source"`
-}
-
-type Application struct {
-	Spec Spec `yaml:"spec"`
-}
-
-type Index struct {
-	Entries map[string][]struct {
-		Version string `yaml:"version"`
-	} `yaml:"entries"`
-}
