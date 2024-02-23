@@ -6,6 +6,7 @@ require (
 	github.com/Masterminds/semver v1.5.0
 	github.com/go-git/go-git/v5 v5.11.0
 	github.com/google/go-github/v59 v59.0.0
+	github.com/jarcoal/httpmock v1.3.1
 	github.com/sethvargo/go-githubactions v1.2.0
 	github.com/stretchr/testify v1.8.4
 	golang.org/x/oauth2 v0.17.0

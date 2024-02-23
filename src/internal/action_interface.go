@@ -1,6 +1,8 @@
 package internal
 
 import (
+	"fmt"
+
 	"github.com/sethvargo/go-githubactions"
 	"github.com/stretchr/testify/mock"
 )
@@ -10,6 +12,8 @@ type ActionInterface interface {
 	Getenv(name string) string
 	Debugf(format string, args ...interface{})
 	Fatalf(format string, args ...interface{})
+	Infof(format string, args ...interface{})
+	GetAddress() string
 }
 
 var _ ActionInterface = &GithubActionInterface{}
@@ -40,6 +44,14 @@ func (g *GithubActionInterface) Fatalf(format string, args ...interface{}) {
 	g.action.Fatalf(format, args...)
 }
 
+func (g *GithubActionInterface) Infof(format string, args ...interface{}) {
+	g.action.Infof(format, args...)
+}
+
+func (a *GithubActionInterface) GetAddress() string {
+	return fmt.Sprintf("%p", a)
+}
+
 type MockActionInterface struct {
 	Inputs map[string]string
 	Env    map[string]string
@@ -55,7 +67,17 @@ func (m *MockActionInterface) Getenv(name string) string {
 }
 
 func (m *MockActionInterface) Debugf(format string, args ...interface{}) {
+	m.Called(format, args)
 }
 
 func (m *MockActionInterface) Fatalf(format string, args ...interface{}) {
+	m.Called(format, args)
+}
+
+func (m *MockActionInterface) Infof(format string, args ...interface{}) {
+	m.Called(format, args)
+}
+
+func (m *MockActionInterface) GetAddress() string {
+	return fmt.Sprintf("%p", m)
 }

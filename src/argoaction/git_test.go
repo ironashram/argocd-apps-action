@@ -12,7 +12,6 @@ import (
 )
 
 func TestCreatePullRequest(t *testing.T) {
-	// Mock action interface
 	mockAction := &internal.MockActionInterface{
 		Inputs: map[string]string{
 			"token": "your-github-token",
@@ -21,16 +20,13 @@ func TestCreatePullRequest(t *testing.T) {
 		},
 	}
 
-	// Mock GitHub client
 	var mockClient internal.GitHubClient
 
-	// Mock pull request details
 	baseBranch := "main"
 	newBranch := "feature-branch"
 	title := "Test Pull Request"
 	body := "This is a test pull request"
 
-	// Mock expected new pull request
 	expectedPR := &github.NewPullRequest{
 		Title:               github.String(title),
 		Head:                github.String(newBranch),
@@ -39,7 +35,6 @@ func TestCreatePullRequest(t *testing.T) {
 		MaintainerCanModify: github.Bool(true),
 	}
 
-	// Mock successful pull request creation
 	mockClient = &internal.MockGithubClient{
 		PullRequestsService: &internal.MockPullRequestsService{
 			CreateFunc: func(ctx context.Context, owner string, repo string, newPR *github.NewPullRequest) (*github.PullRequest, *github.Response, error) {
@@ -51,13 +46,10 @@ func TestCreatePullRequest(t *testing.T) {
 		},
 	}
 
-	// Call the function under test
 	err := createPullRequest(mockClient, baseBranch, newBranch, title, body, mockAction)
 
-	// Assert that no error occurred
 	assert.NoError(t, err)
 
-	// Mock pull request creation error
 	expectedError := errors.New("failed to create pull request")
 	mockClient = &internal.MockGithubClient{
 		PullRequestsService: &internal.MockPullRequestsService{
@@ -67,9 +59,7 @@ func TestCreatePullRequest(t *testing.T) {
 		},
 	}
 
-	// Call the function under test again
 	err = createPullRequest(mockClient, baseBranch, newBranch, title, body, mockAction)
 
-	// Assert the expected error occurred
 	assert.EqualError(t, err, expectedError.Error())
 }

@@ -1,6 +1,7 @@
 package argoaction
 
 import (
+	"fmt"
 	"os"
 	"path"
 	"path/filepath"
@@ -62,7 +63,12 @@ var processFile = func(path string, repo *git.Repository, githubClient internal.
 	var index models.Index
 	err = yaml.Unmarshal(body, &index)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to unmarshal YAML body: %w", err)
+	}
+
+	if index.Entries == nil {
+		action.Debugf("No entries found in index at %s\n", url)
+		return nil
 	}
 
 	if _, ok := index.Entries[chart]; !ok || len(index.Entries[chart]) == 0 {
@@ -77,7 +83,7 @@ var processFile = func(path string, repo *git.Repository, githubClient internal.
 	}
 
 	if newest != nil {
-		action.Debugf("There is a newer %s version: %s\n", chart, newest)
+		action.Infof("There is a newer %s version: %s\n", chart, newest)
 
 		if cfg.CreatePr {
 			branchName := "update-" + chart
@@ -115,7 +121,7 @@ var processFile = func(path string, repo *git.Repository, githubClient internal.
 				return err
 			}
 		} else {
-			action.Debugf("Create PR is disabled, skipping PR creation for %s\n", chart)
+			action.Infof("Create PR is disabled, skipping PR creation for %s\n", chart)
 		}
 	} else {
 		action.Debugf("No newer version of %s is available\n", chart)

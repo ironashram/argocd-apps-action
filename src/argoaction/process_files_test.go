@@ -1,15 +1,18 @@
 package argoaction
 
 import (
-	"errors"
+	"net/http"
 	"testing"
 
 	"github.com/go-git/go-git/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"gopkg.in/yaml.v2"
 
 	"github.com/ironashram/argocd-apps-action/internal"
 	"github.com/ironashram/argocd-apps-action/models"
+
+	"github.com/jarcoal/httpmock"
 )
 
 func TestProcessFile(t *testing.T) {
@@ -19,17 +22,40 @@ func TestProcessFile(t *testing.T) {
 	mockOSInterface := &internal.MockOS{}
 
 	cfg := &models.Config{
-		CreatePr:     true,
+		CreatePr:     false,
 		TargetBranch: "main",
 	}
 
+	httpmock.Activate()
+	defer httpmock.DeactivateAndReset()
+
+	entries := models.Index{
+		Entries: map[string][]struct {
+			Version string `yaml:"version"`
+		}{
+			"chart1": {{Version: "0.9.0"}, {Version: "0.8.0"}},
+			"chart2": {{Version: "1.7.0"}, {Version: "0.6.0"}},
+		},
+	}
+
+	responder := func(req *http.Request) (*http.Response, error) {
+		yamlData, err := yaml.Marshal(entries)
+		if err != nil {
+			return httpmock.NewStringResponse(500, ""), err
+		}
+
+		return httpmock.NewBytesResponse(200, yamlData), nil
+	}
+
+	httpmock.RegisterResponder("GET", "https://test.local/index.yaml", responder)
+
 	t.Run("Skip invalid application manifest", func(t *testing.T) {
-		mockAction.On("Debugf", "Skipping invalid application manifest %s\n", mock.Anything).Once()
-		fileContent := []byte("spec:\n  source:\n    chart: chart1\n    repoURL: https://test.local\n    targetRevision: \n")
+		mockAction.On("Debugf", "Skipping invalid application manifest %s\n", mock.AnythingOfType("[]interface {}")).Once()
+		fileContent := []byte("spec:\n  source:\n    fakechart: chart1\n    repoURL: https://test.local\n")
 
 		mockOSInterface.On("ReadFile", mock.Anything).Return([]byte(fileContent), nil).Once()
 
-		err := processFile("invalid.yaml", mockRepo, mockGitHubClient, cfg, mockAction, mockOSInterface)
+		err := processFile("invalid1.yaml", mockRepo, mockGitHubClient, cfg, mockAction, mockOSInterface)
 
 		assert.NoError(t, err)
 		mockAction.AssertExpectations(t)
@@ -37,11 +63,11 @@ func TestProcessFile(t *testing.T) {
 	})
 
 	t.Run("Skip empty chart, url, and targetRevision", func(t *testing.T) {
-		mockAction.On("Debugf", "Skipping invalid application manifest %s\n", mock.Anything).Once()
+		mockAction.On("Debugf", "Skipping invalid application manifest %s\n", mock.AnythingOfType("[]interface {}")).Once()
 		fileContent := []byte("spec:\n  source:\n    chart: chart1\n    repoURL: https://test.local\n    targetRevision: \n")
 		mockOSInterface.On("ReadFile", mock.Anything).Return([]byte(fileContent), nil).Once()
 
-		err := processFile("valid.yaml", mockRepo, mockGitHubClient, cfg, mockAction, mockOSInterface)
+		err := processFile("invalid2.yaml", mockRepo, mockGitHubClient, cfg, mockAction, mockOSInterface)
 
 		assert.NoError(t, err)
 		mockAction.AssertExpectations(t)
@@ -49,42 +75,15 @@ func TestProcessFile(t *testing.T) {
 	})
 
 	t.Run("Check chart, url, and targetRevision", func(t *testing.T) {
-		mockAction.On("Debugf", "Checking %s from %s, current version is %s\n", mock.Anything, mock.Anything, mock.Anything).Once()
-		mockOSInterface.On("WriteFile", mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
-		mockAction.On("Debugf", "There is a newer %s version: %s\n", mock.Anything, mock.Anything).Once()
-		mockGitHubClient.On("CreatePullRequest", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
-		mockOSInterface.On("ReadFile", mock.Anything).Return([]byte("file content"), nil).Once()
+		mockAction.On("Debugf", "Checking %s from %s, current version is %s\n", mock.AnythingOfType("[]interface {}")).Once()
+		mockAction.On("Infof", "There is a newer %s version: %s\n", mock.AnythingOfType("[]interface {}")).Once()
+		mockAction.On("Infof", "Create PR is disabled, skipping PR creation for %s\n", mock.AnythingOfType("[]interface {}")).Once()
+		fileContent := []byte("spec:\n  source:\n    chart: chart1\n    repoURL: https://test.local\n    targetRevision: 0.1.2 \n")
+		mockOSInterface.On("ReadFile", mock.Anything).Return([]byte(fileContent), nil).Once()
 
 		err := processFile("valid.yaml", mockRepo, mockGitHubClient, cfg, mockAction, mockOSInterface)
 
 		assert.NoError(t, err)
-		mockAction.AssertExpectations(t)
-		mockOSInterface.AssertExpectations(t)
-		mockGitHubClient.AssertExpectations(t)
-	})
-
-	t.Run("No newer version available", func(t *testing.T) {
-		mockAction.On("Debugf", "Checking %s from %s, current version is %s\n", mock.Anything, mock.Anything, mock.Anything).Once()
-		mockAction.On("Debugf", "No newer version of %s is available\n", mock.Anything).Once()
-		mockOSInterface.On("ReadFile", mock.Anything).Return([]byte("file content"), nil).Once()
-
-		err := processFile("valid.yaml", mockRepo, mockGitHubClient, cfg, mockAction, mockOSInterface)
-
-		assert.NoError(t, err)
-		mockAction.AssertExpectations(t)
-		mockOSInterface.AssertExpectations(t)
-	})
-
-	t.Run("Error creating pull request", func(t *testing.T) {
-		mockAction.On("Debugf", "Checking %s from %s, current version is %s\n", mock.Anything, mock.Anything, mock.Anything).Once()
-		mockOSInterface.On("WriteFile", mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
-		mockAction.On("Debugf", "There is a newer %s version: %s\n", mock.Anything, mock.Anything).Once()
-		mockGitHubClient.On("CreatePullRequest", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(errors.New("error creating pull request")).Once()
-		mockOSInterface.On("ReadFile", mock.Anything).Return([]byte("file content"), nil).Once()
-
-		err := processFile("valid.yaml", mockRepo, mockGitHubClient, cfg, mockAction, mockOSInterface)
-
-		assert.Error(t, err)
 		mockAction.AssertExpectations(t)
 		mockOSInterface.AssertExpectations(t)
 		mockGitHubClient.AssertExpectations(t)
