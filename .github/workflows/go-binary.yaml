@@ -6,13 +6,14 @@ on:
       - 'v*'
 
 permissions:
-  contents: write
-  packages: write
+  contents: read
 
 jobs:
 
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     strategy:
       matrix:
         goos: [linux]
@@ -30,5 +31,4 @@ jobs:
           goos: ${{ matrix.goos }}
           goarch: ${{ matrix.goarch }}
           pre_command: export CGO_ENABLED=0
-          project_path: src
-          overwrite: true
+          project_path: src/cmd
