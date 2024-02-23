@@ -45,10 +45,10 @@ var createNewBranch = func(gitOps internal.GitOperations, branchName string) err
 }
 
 var commitChanges = func(gitOps internal.GitOperations, path string, commitMessage string) error {
-    worktree, err := gitOps.Worktree()
-    if err != nil {
-        return fmt.Errorf("failed to commit changes: %w", err)
-    }
+	worktree, err := gitOps.Worktree()
+	if err != nil {
+		return fmt.Errorf("failed to commit changes: %w", err)
+	}
 
 	_, err = worktree.Add(path)
 	if err != nil {
@@ -76,9 +76,9 @@ var pushChanges = func(gitOps internal.GitOperations, branchName string, cfg *mo
 		},
 		RefSpecs: []config.RefSpec{config.RefSpec(branchName + ":" + branchName)},
 	})
-    if err != nil {
-        return fmt.Errorf("failed to push changes: %w", err)
-    }
+	if err != nil {
+		return fmt.Errorf("failed to push changes: %w", err)
+	}
 	return nil
 }
 
