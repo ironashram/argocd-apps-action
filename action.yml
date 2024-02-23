@@ -19,9 +19,6 @@ runs:
     - name: Download ArgoCD Apps Action Binary
       env:
         ACTION_VERSION: "v0.0.2"
-        INPUT_TARGET_BRANCH: ${{ inputs.target_branch }}
-        INPUT_CREATE_PR: ${{ inputs.create_pr }}
-        INPUT_APPS_FOLDER: ${{ inputs.apps_folder }}
       shell: bash
       run: |
         wget https://github.com/ironashram/argocd-apps-action/releases/download/${ACTION_VERSION}/argocd-apps-action-${ACTION_VERSION}-linux-amd64.tar.gz
@@ -40,6 +37,10 @@ runs:
         fi
 
     - name: Run Action
+      env:
+        TARGET_BRANCH: ${{ inputs.target_branch }}
+        CREATE_PR: ${{ inputs.create_pr }}
+        APPS_FOLDER: ${{ inputs.apps_folder }}
       shell: bash
       run: |
         # Run the ArgoCD Apps Action
