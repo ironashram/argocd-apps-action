@@ -3,9 +3,9 @@ package main
 import (
 	"context"
 
+	"github.com/ironashram/argocd-apps-action/argoaction"
 	"github.com/ironashram/argocd-apps-action/config"
 	"github.com/ironashram/argocd-apps-action/internal"
-	"github.com/ironashram/argocd-apps-action/argoaction"
 )
 
 func main() {
