@@ -3,9 +3,13 @@ name: Go unit tests
 on:
   pull_request:
     types: [ opened, edited, reopened, synchronize ]
+    paths:
+      - 'src/**'
   push:
     branches:
       - master
+    paths:
+      - 'src/**'
   workflow_dispatch:
 
 jobs:
@@ -15,16 +19,28 @@ jobs:
         go-version: [ 1.21.x, 1.22.x ]
         os: [ ubuntu-latest ]
     runs-on: ${{ matrix.os }}
+    env:
+      SKIP: 0
 
     steps:
-      - name: Install Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: ${{ matrix.go-version }}
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Check for changes in src
+        id: changes
+        run: |
+          if git diff --quiet HEAD^ HEAD -- ./src; then
+            echo "SKIP=1" >> $GITHUB_ENV
+          fi
+
+      - name: Install Go
+        if: env.SKIP == '0'
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ matrix.go-version }}
+
       - name: Restore cache
+        if: env.SKIP == '0'
         uses: actions/cache@v4
         with:
           path: ~/go/pkg/mod
@@ -33,6 +49,7 @@ jobs:
             ${{ runner.os }}-go-
 
       - name: Gofmt
+        if: env.SKIP == '0' && matrix.os == 'ubuntu-latest'
         working-directory: ${{ github.workspace }}/src
         run: |
           if [ "$(gofmt -s -l . | wc -l)" -gt 0 ];
@@ -41,12 +58,13 @@ jobs:
             git diff
             exit 1
           fi
-        if: matrix.os == 'ubuntu-latest'
 
       - name: Build
+        if: env.SKIP == '0'
         working-directory: ${{ github.workspace }}/src
         run: go build -v ./...
 
       - name: Test
+        if: env.SKIP == '0'
         working-directory: ${{ github.workspace }}/src
         run: go test -v ./...
