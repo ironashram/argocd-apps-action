@@ -2,6 +2,8 @@ package internal
 
 import (
 	"testing"
+
+	"github.com/stretchr/testify/mock"
 )
 
 func TestActionInterface_GetInput(t *testing.T) {
@@ -121,6 +123,7 @@ func TestActionInterface_Debugf(t *testing.T) {
 	// Run tests
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			tc.action.On("Debugf", tc.format, mock.Anything).Once()
 			tc.action.Debugf(tc.format, tc.args...)
 		})
 	}
@@ -157,6 +160,7 @@ func TestActionInterface_Fatalf(t *testing.T) {
 	// Run tests
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			tc.action.On("Fatalf", tc.format, mock.Anything).Once()
 			tc.action.Fatalf(tc.format, tc.args...)
 		})
 	}
