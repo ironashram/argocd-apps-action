@@ -13,7 +13,7 @@ The action then checks if there is a new release and opens PR with the updates i
 
 To use this action in your GitHub workflow you can do as follows:
 
-```
+```yaml
 name: "ArgoCD Apps Updates"
 
 on:
@@ -21,14 +21,12 @@ on:
     - cron:  '0 7 * * MON'
   workflow_dispatch:
 
-permissions:
-  contents: write
-  packages: write
-
 jobs:
 
   update:
     runs-on: ubuntu-latest
+    permissions:
+        contents: write
     steps:
 
       - name: Check out
