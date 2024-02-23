@@ -14,5 +14,35 @@ The action then checks if there is a new release and opens PR with the updates i
 To use this action in your GitHub workflow you can do as follows:
 
 ```
+name: "ArgoCD Apps Updates"
 
+on:
+  schedule:
+    - cron:  '0 7 * * MON'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+
+  update:
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Check out
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: '0'
+
+      - name: Check updates for ArgoCD Apps
+        uses:
+          ironashram/argocd-apps-action@v0.0.1
+        with:
+          target_branch: main
+          create_pr: true
+          apps_folder: apps/manifests
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```

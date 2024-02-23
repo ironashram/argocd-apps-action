@@ -12,7 +12,7 @@ inputs:
   apps_folder:
     description: "folder to look for the app of apps"
     required: false
-    default: "apps"
+    default: "apps/manifests"
 runs:
   using: composite
   steps:
