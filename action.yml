@@ -38,9 +38,9 @@ runs:
 
     - name: Run Action
       env:
-        TARGET_BRANCH: ${{ inputs.target_branch }}
-        CREATE_PR: ${{ inputs.create_pr }}
-        APPS_FOLDER: ${{ inputs.apps_folder }}
+        INPUT_TARGET_BRANCH: ${{ inputs.target_branch }}
+        INPUT_CREATE_PR: ${{ inputs.create_pr }}
+        INPUT_APPS_FOLDER: ${{ inputs.apps_folder }}
       shell: bash
       run: |
         # Run the ArgoCD Apps Action
