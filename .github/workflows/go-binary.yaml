@@ -1,0 +1,35 @@
+name: "go: build binaries"
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+
+jobs:
+
+  build:
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        goos: [linux]
+        goarch: [amd64]
+
+    steps:
+
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Go Release Binaries
+        uses: wangyoucao577/go-release-action@v1.48
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          goos: ${{ matrix.goos }}
+          goarch: ${{ matrix.goarch }}
+          pre_command: export CGO_ENABLED=0
+          project_path: src
+          release_tag: "${{ github.ref }}"
