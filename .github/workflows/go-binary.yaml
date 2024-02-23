@@ -31,3 +31,4 @@ jobs:
           goarch: ${{ matrix.goarch }}
           pre_command: export CGO_ENABLED=0
           project_path: src
+          overwrite: true
