@@ -26,6 +26,8 @@ jobs:
       - name: Create Release
         run: |
           gh release create -t "${{ github.ref_name }}" "${{ github.ref_name }}" --generate-notes
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Go Release Binaries
         uses: wangyoucao577/go-release-action@v1.48
