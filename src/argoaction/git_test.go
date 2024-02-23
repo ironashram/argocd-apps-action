@@ -13,7 +13,7 @@ import (
 
 func TestCreatePullRequest(t *testing.T) {
 	// Mock action interface
-	mockAction := internal.MockActionInterface{
+	mockAction := &internal.MockActionInterface{
 		Inputs: map[string]string{
 			"token": "your-github-token",
 			"owner": "your-github-owner",
@@ -40,7 +40,7 @@ func TestCreatePullRequest(t *testing.T) {
 	}
 
 	// Mock successful pull request creation
-	mockClient = &internal.MockClient{
+	mockClient = &internal.MockGithubClient{
 		PullRequestsService: &internal.MockPullRequestsService{
 			CreateFunc: func(ctx context.Context, owner string, repo string, newPR *github.NewPullRequest) (*github.PullRequest, *github.Response, error) {
 				assert.Equal(t, mockAction.GetInput("owner"), owner)
@@ -59,7 +59,7 @@ func TestCreatePullRequest(t *testing.T) {
 
 	// Mock pull request creation error
 	expectedError := errors.New("failed to create pull request")
-	mockClient = &internal.MockClient{
+	mockClient = &internal.MockGithubClient{
 		PullRequestsService: &internal.MockPullRequestsService{
 			CreateFunc: func(ctx context.Context, owner string, repo string, newPR *github.NewPullRequest) (*github.PullRequest, *github.Response, error) {
 				return nil, nil, expectedError

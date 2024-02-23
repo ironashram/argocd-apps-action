@@ -1,6 +1,5 @@
 package models
 
-
 type Source struct {
 	Chart          string `yaml:"chart"`
 	RepoURL        string `yaml:"repoURL"`

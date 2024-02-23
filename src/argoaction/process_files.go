@@ -24,7 +24,8 @@ var checkForUpdates = func(repo *git.Repository, githubClient internal.GitHubCli
 		}
 
 		if filepath.Ext(path) == ".yaml" {
-			err := processFile(path, repo, githubClient, cfg, action)
+			osWrapper := &internal.OSWrapper{}
+			err := processFile(path, repo, githubClient, cfg, action, osWrapper)
 			if err != nil {
 				return err
 			}
@@ -36,8 +37,7 @@ var checkForUpdates = func(repo *git.Repository, githubClient internal.GitHubCli
 	return walkErr
 }
 
-var processFile = func(path string, repo *git.Repository, githubClient internal.GitHubClient, cfg *models.Config, action internal.ActionInterface) error {
-	osw := &internal.OSWrapper{}
+var processFile = func(path string, repo *git.Repository, githubClient internal.GitHubClient, cfg *models.Config, action internal.ActionInterface, osw internal.OSInterface) error {
 	app, err := readAndParseYAML(osw, path)
 	if err != nil {
 		return err

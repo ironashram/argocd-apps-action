@@ -8,13 +8,13 @@ func TestActionInterface_GetInput(t *testing.T) {
 	// Test cases
 	testCases := []struct {
 		name     string
-		action   MockActionInterface
+		action   *MockActionInterface
 		input    string
 		expected string
 	}{
 		{
 			name: "Test Case 1",
-			action: MockActionInterface{
+			action: &MockActionInterface{
 				Inputs: map[string]string{
 					"input1": "value1",
 					"input2": "value2",
@@ -25,7 +25,7 @@ func TestActionInterface_GetInput(t *testing.T) {
 		},
 		{
 			name: "Test Case 2",
-			action: MockActionInterface{
+			action: &MockActionInterface{
 				Inputs: map[string]string{
 					"input1": "value1",
 					"input2": "value2",
@@ -51,13 +51,13 @@ func TestActionInterface_Getenv(t *testing.T) {
 	// Test cases
 	testCases := []struct {
 		name     string
-		action   MockActionInterface
+		action   *MockActionInterface
 		env      string
 		expected string
 	}{
 		{
 			name: "Test Case 1",
-			action: MockActionInterface{
+			action: &MockActionInterface{
 				Env: map[string]string{
 					"env1": "value1",
 					"env2": "value2",
@@ -68,7 +68,7 @@ func TestActionInterface_Getenv(t *testing.T) {
 		},
 		{
 			name: "Test Case 2",
-			action: MockActionInterface{
+			action: &MockActionInterface{
 				Env: map[string]string{
 					"env1": "value1",
 					"env2": "value2",
@@ -94,13 +94,13 @@ func TestActionInterface_Debugf(t *testing.T) {
 	// Test cases
 	testCases := []struct {
 		name   string
-		action MockActionInterface
+		action *MockActionInterface
 		format string
 		args   []interface{}
 	}{
 		{
 			name: "Test Case 1",
-			action: MockActionInterface{
+			action: &MockActionInterface{
 				Inputs: map[string]string{},
 				Env:    map[string]string{},
 			},
@@ -109,7 +109,7 @@ func TestActionInterface_Debugf(t *testing.T) {
 		},
 		{
 			name: "Test Case 2",
-			action: MockActionInterface{
+			action: &MockActionInterface{
 				Inputs: map[string]string{},
 				Env:    map[string]string{},
 			},
@@ -130,13 +130,13 @@ func TestActionInterface_Fatalf(t *testing.T) {
 	// Test cases
 	testCases := []struct {
 		name   string
-		action MockActionInterface
+		action *MockActionInterface
 		format string
 		args   []interface{}
 	}{
 		{
 			name: "Test Case 1",
-			action: MockActionInterface{
+			action: &MockActionInterface{
 				Inputs: map[string]string{},
 				Env:    map[string]string{},
 			},
@@ -145,7 +145,7 @@ func TestActionInterface_Fatalf(t *testing.T) {
 		},
 		{
 			name: "Test Case 2",
-			action: MockActionInterface{
+			action: &MockActionInterface{
 				Inputs: map[string]string{},
 				Env:    map[string]string{},
 			},

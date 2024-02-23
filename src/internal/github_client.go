@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/google/go-github/v59/github"
+	"github.com/stretchr/testify/mock"
 )
 
 type GitHubClient interface {
@@ -22,11 +23,12 @@ func (c *RealGitHubClient) PullRequests() PullRequestsService {
 	return c.Client.PullRequests
 }
 
-type MockClient struct {
+type MockGithubClient struct {
 	PullRequestsService PullRequestsService
+	mock.Mock
 }
 
-func (c *MockClient) PullRequests() PullRequestsService {
+func (c *MockGithubClient) PullRequests() PullRequestsService {
 	return c.PullRequestsService
 }
 

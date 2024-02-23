@@ -5,38 +5,20 @@ import (
 	"testing"
 
 	"github.com/ironashram/argocd-apps-action/models"
+	"github.com/ironashram/argocd-apps-action/internal"
 )
-
-type MockActionInterface struct {
-	Inputs map[string]string
-	Env    map[string]string
-}
-
-func (m MockActionInterface) GetInput(name string) string {
-	return m.Inputs[name]
-}
-
-func (m MockActionInterface) Getenv(name string) string {
-	return m.Env[name]
-}
-
-func (m MockActionInterface) Debugf(format string, args ...interface{}) {
-}
-
-func (m MockActionInterface) Fatalf(format string, args ...interface{}) {
-}
 
 func TestNewFromInputs(t *testing.T) {
 	// Test cases
 	testCases := []struct {
 		name        string
-		action      MockActionInterface
+		action      *internal.MockActionInterface
 		expected    *models.Config
 		expectedErr error
 	}{
 		{
 			name: "Test Case 1",
-			action: MockActionInterface{
+			action: &internal.MockActionInterface{
 				Inputs: map[string]string{
 					"target_branch": "main",
 					"create_pr":     "true",
@@ -60,7 +42,7 @@ func TestNewFromInputs(t *testing.T) {
 		},
 		{
 			name: "Test Case 2",
-			action: MockActionInterface{
+			action: &internal.MockActionInterface{
 				Inputs: map[string]string{
 					"target_branch": "develop",
 					"create_pr":     "false",
