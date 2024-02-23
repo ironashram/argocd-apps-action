@@ -2,6 +2,7 @@ package argoaction
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	githttp "github.com/go-git/go-git/v5/plumbing/transport/http"
@@ -15,19 +16,20 @@ import (
 	"github.com/google/go-github/v59/github"
 )
 
-var createNewBranch = func(repo *git.Repository, branchName string) error {
-	headRef, err := repo.Head()
+var createNewBranch = func(gitOps internal.GitOperations, branchName string) error {
+	headRef, err := gitOps.Head()
 	if err != nil {
 		return err
 	}
 
 	newBranchRefName := plumbing.NewBranchReferenceName(branchName)
-	err = repo.Storer.SetReference(plumbing.NewHashReference(newBranchRefName, headRef.Hash()))
+	newReference := plumbing.NewHashReference(newBranchRefName, headRef.Hash())
+	err = gitOps.SetReference(newBranchRefName.String(), newReference)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create new branch: %w", err)
 	}
 
-	worktree, err := repo.Worktree()
+	worktree, err := gitOps.Worktree()
 	if err != nil {
 		return err
 	}
@@ -42,11 +44,11 @@ var createNewBranch = func(repo *git.Repository, branchName string) error {
 	return nil
 }
 
-var commitChanges = func(repo *git.Repository, path string, commitMessage string) error {
-	worktree, err := repo.Worktree()
-	if err != nil {
-		return err
-	}
+var commitChanges = func(gitOps internal.GitOperations, path string, commitMessage string) error {
+    worktree, err := gitOps.Worktree()
+    if err != nil {
+        return fmt.Errorf("failed to commit changes: %w", err)
+    }
 
 	_, err = worktree.Add(path)
 	if err != nil {
@@ -66,17 +68,17 @@ var commitChanges = func(repo *git.Repository, path string, commitMessage string
 	return nil
 }
 
-var pushChanges = func(repo *git.Repository, branchName string, cfg *models.Config) error {
-	err := repo.Push(&git.PushOptions{
+var pushChanges = func(gitOps internal.GitOperations, branchName string, cfg *models.Config) error {
+	err := gitOps.Push(&git.PushOptions{
 		Auth: &githttp.BasicAuth{
 			Username: "github-actions[bot]",
 			Password: cfg.Token,
 		},
 		RefSpecs: []config.RefSpec{config.RefSpec(branchName + ":" + branchName)},
 	})
-	if err != nil {
-		return err
-	}
+    if err != nil {
+        return fmt.Errorf("failed to push changes: %w", err)
+    }
 	return nil
 }
 

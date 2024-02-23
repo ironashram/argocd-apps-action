@@ -6,10 +6,10 @@ import (
 
 	"net/http"
 
+	"github.com/go-git/go-git/v5"
 	"github.com/ironashram/argocd-apps-action/internal"
 	"github.com/ironashram/argocd-apps-action/models"
 
-	"github.com/go-git/go-git/v5"
 	"github.com/google/go-github/v59/github"
 
 	"golang.org/x/oauth2"
@@ -24,6 +24,8 @@ func StartUpdate(ctx context.Context, cfg *models.Config, action internal.Action
 		action.Fatalf("error: %v", err)
 	}
 
+	gitOps := &internal.GitRepo{Repo: repo}
+
 	ts := oauth2.StaticTokenSource(
 		&oauth2.Token{AccessToken: cfg.Token},
 	)
@@ -33,7 +35,7 @@ func StartUpdate(ctx context.Context, cfg *models.Config, action internal.Action
 	githubClient := github.NewClient(tc)
 	realClient := &internal.RealGitHubClient{Client: githubClient}
 
-	err = checkForUpdates(repo, realClient, cfg, action)
+	err = checkForUpdates(gitOps, realClient, cfg, action)
 	if err != nil {
 		action.Fatalf("error: %v", err)
 	}

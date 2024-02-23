@@ -4,7 +4,6 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/go-git/go-git/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"gopkg.in/yaml.v2"
@@ -17,7 +16,7 @@ import (
 
 func TestProcessFile(t *testing.T) {
 	mockAction := &internal.MockActionInterface{}
-	mockRepo := &git.Repository{}
+	mockRepo := &internal.MockGitRepo{}
 	mockGitHubClient := &internal.MockGithubClient{}
 	mockOSInterface := &internal.MockOS{}
 

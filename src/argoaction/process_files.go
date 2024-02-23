@@ -10,12 +10,10 @@ import (
 	"github.com/ironashram/argocd-apps-action/models"
 	"github.com/ironashram/argocd-apps-action/utils"
 
-	"github.com/go-git/go-git/v5"
-
 	"gopkg.in/yaml.v2"
 )
 
-var checkForUpdates = func(repo *git.Repository, githubClient internal.GitHubClient, cfg *models.Config, action internal.ActionInterface) error {
+var checkForUpdates = func(gitOps internal.GitOperations, githubClient internal.GitHubClient, cfg *models.Config, action internal.ActionInterface) error {
 	dir := path.Join(cfg.Workspace, cfg.AppsFolder)
 
 	var walkErr error
@@ -26,7 +24,7 @@ var checkForUpdates = func(repo *git.Repository, githubClient internal.GitHubCli
 
 		if filepath.Ext(path) == ".yaml" {
 			osWrapper := &internal.OSWrapper{}
-			err := processFile(path, repo, githubClient, cfg, action, osWrapper)
+			err := processFile(path, gitOps, githubClient, cfg, action, osWrapper)
 			if err != nil {
 				return err
 			}
@@ -38,7 +36,7 @@ var checkForUpdates = func(repo *git.Repository, githubClient internal.GitHubCli
 	return walkErr
 }
 
-var processFile = func(path string, repo *git.Repository, githubClient internal.GitHubClient, cfg *models.Config, action internal.ActionInterface, osw internal.OSInterface) error {
+var processFile = func(path string, gitOps internal.GitOperations, githubClient internal.GitHubClient, cfg *models.Config, action internal.ActionInterface, osw internal.OSInterface) error {
 	app, err := readAndParseYAML(osw, path)
 	if err != nil {
 		return err
@@ -87,7 +85,7 @@ var processFile = func(path string, repo *git.Repository, githubClient internal.
 
 		if cfg.CreatePr {
 			branchName := "update-" + chart
-			err = createNewBranch(repo, branchName)
+			err = createNewBranch(gitOps, branchName)
 			if err != nil {
 				return err
 			}
@@ -104,12 +102,12 @@ var processFile = func(path string, repo *git.Repository, githubClient internal.
 			}
 
 			commitMessage := "Update " + chart + " to version " + newest.String()
-			err = commitChanges(repo, path, commitMessage)
+			err = commitChanges(gitOps, path, commitMessage)
 			if err != nil {
 				return err
 			}
 
-			err = pushChanges(repo, branchName, cfg)
+			err = pushChanges(gitOps, branchName, cfg)
 			if err != nil {
 				return err
 			}
