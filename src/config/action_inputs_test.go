@@ -4,8 +4,8 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/ironashram/argocd-apps-action/models"
 	"github.com/ironashram/argocd-apps-action/internal"
+	"github.com/ironashram/argocd-apps-action/models"
 )
 
 func TestNewFromInputs(t *testing.T) {
