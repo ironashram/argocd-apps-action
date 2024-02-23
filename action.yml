@@ -14,9 +14,30 @@ inputs:
     required: false
     default: "apps"
 runs:
-  using: docker
-  image: "quay.io/m1k_cloud/argocd-apps-action:latest"
-  args:
-    - ${{ inputs.target_branch }}
-    - ${{ inputs.create_pr }}
-    - ${{ inputs.apps_folder }}
+  using: composite
+  steps:
+    - name: Download ArgoCD Apps Action Binary
+      env:
+        ACTION_VERSION: "v0.0.1"
+      shell: bash
+      run: |
+        wget https://github.com/ironashram/argocd-apps-action/releases/download/${ACTION_VERSION}/argocd-apps-action-${ACTION_VERSION}-linux-amd64.tar.gz
+        wget https://github.com/ironashram/argocd-apps-action/releases/download/${ACTION_VERSION}/argocd-apps-action-${ACTION_VERSION}-linux-amd64.tar.gz.md5
+        echo "Verifying MD5 checksum"
+        md5sum argocd-apps-action-${ACTION_VERSION}-linux-amd64.tar.gz > checksum
+        grep $(cat argocd-apps-action-${ACTION_VERSION}-linux-amd64.tar.gz.md5) checksum
+        if [ $? -eq 0 ]; then
+          echo "Checksum verified"
+          tar -xvf argocd-apps-action-${ACTION_VERSION}-linux-amd64.tar.gz
+          chmod +x argocd-apps-action
+          mv argocd-apps-action /usr/local/bin/argocd-apps-action
+        else
+          echo "Checksum verification failed"
+          exit 1
+        fi
+
+    - name: Run Action
+      shell: bash
+      run: |
+        # Run the ArgoCD Apps Action
+        argocd-apps-action
