@@ -6,6 +6,7 @@ import (
 
 	"github.com/ironashram/argocd-apps-action/internal"
 	"github.com/ironashram/argocd-apps-action/models"
+	"github.com/stretchr/testify/mock"
 )
 
 func TestNewFromInputs(t *testing.T) {
@@ -69,6 +70,9 @@ func TestNewFromInputs(t *testing.T) {
 	// Run tests
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			tc.action.On("Debugf", "target_branch: %s", mock.Anything).Once()
+			tc.action.On("Debugf", "create_pr: %v", mock.Anything).Once()
+			tc.action.On("Debugf", "apps_folder: %s", mock.Anything).Once()
 			config, err := NewFromInputs(tc.action)
 
 			if err != tc.expectedErr {
