@@ -11,10 +11,10 @@ The action then checks if there is a new release and opens PR with the updates i
 
 ## Usage
 
-To use this action in your GitHub workflow you can do as follows:
+Example GitHub workflow:
 
 ```yaml
-name: "ArgoCD Apps Updates"
+name: "ArgoCD App Updates"
 
 on:
   schedule:
