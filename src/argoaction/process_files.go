@@ -5,13 +5,15 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"regexp"
+	"strings"
 
 	"github.com/Masterminds/semver"
 	"github.com/ironashram/argocd-apps-action/internal"
 	"github.com/ironashram/argocd-apps-action/models"
 	"github.com/ironashram/argocd-apps-action/utils"
 
-	"gopkg.in/yaml.v2"
+	"sigs.k8s.io/yaml"
 )
 
 var checkForUpdates = func(gitOps internal.GitOperations, githubClient internal.GitHubClient, cfg *models.Config, action internal.ActionInterface) error {
@@ -37,16 +39,26 @@ var checkForUpdates = func(gitOps internal.GitOperations, githubClient internal.
 	return walkErr
 }
 
-func updateTargetRevision(app *models.Application, newest *semver.Version, path string, action internal.ActionInterface, osw internal.OSInterface) error {
-	app.Spec.Source.TargetRevision = newest.String()
-
-	newData, err := yaml.Marshal(app)
+func updateTargetRevision(newest *semver.Version, path string, action internal.ActionInterface, osw internal.OSInterface) error {
+	oldData, err := osw.ReadFile(path)
 	if err != nil {
-		action.Debugf("Error marshaling app: %v\n", err)
+		action.Debugf("Error reading file: %v\n", err)
 		return err
 	}
 
-	err = osw.WriteFile(path, newData, 0644)
+	lines := strings.Split(string(oldData), "\n")
+
+	for i, line := range lines {
+		if strings.Contains(line, "targetRevision:") {
+			re := regexp.MustCompile(`(.*targetRevision: ).*`)
+			lines[i] = re.ReplaceAllString(line, "${1}"+newest.String())
+			break
+		}
+	}
+
+	newData := strings.Join(lines, "\n")
+
+	err = osw.WriteFile(path, []byte(newData), 0644)
 	if err != nil {
 		action.Debugf("Error writing file: %v\n", err)
 		return err
@@ -110,7 +122,7 @@ var processFile = func(path string, gitOps internal.GitOperations, githubClient 
 				return err
 			}
 
-			err = updateTargetRevision(app, newest, path, action, osw)
+			err = updateTargetRevision(newest, path, action, osw)
 			if err != nil {
 				action.Debugf("Error updating target revision: %v\n", err)
 				return err

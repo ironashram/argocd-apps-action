@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"path/filepath"
 	"time"
 
 	githttp "github.com/go-git/go-git/v5/plumbing/transport/http"
@@ -51,7 +52,17 @@ var commitChanges = func(gitOps internal.GitOperations, path string, commitMessa
 		return fmt.Errorf("failed to commit changes: %w", err)
 	}
 
-	_, err = worktree.Add(path)
+	realWorktree, ok := worktree.(*git.Worktree)
+    if !ok {
+        return fmt.Errorf("failed to assert worktree type")
+    }
+	basePath := realWorktree.Filesystem.Root()
+	relativePath, err := filepath.Rel(basePath, path)
+	if err != nil {
+		return fmt.Errorf("failed to get relative path: %w", err)
+	}
+
+	_, err = worktree.Add(relativePath)
 	if err != nil {
 		return err
 	}

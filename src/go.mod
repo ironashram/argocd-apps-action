@@ -11,7 +11,7 @@ require (
 	github.com/sethvargo/go-githubactions v1.2.0
 	github.com/stretchr/testify v1.8.4
 	golang.org/x/oauth2 v0.17.0
-	gopkg.in/yaml.v2 v2.4.0
+	sigs.k8s.io/yaml v1.4.0
 )
 
 require (

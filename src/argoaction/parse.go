@@ -6,7 +6,7 @@ import (
 
 	"github.com/Masterminds/semver"
 
-	"gopkg.in/yaml.v2"
+	"sigs.k8s.io/yaml"
 )
 
 var readAndParseYAML = func(osi internal.OSInterface, path string) (*models.Application, error) {
