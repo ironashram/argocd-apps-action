@@ -27,6 +27,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
         contents: write
+        pull-requests: write
     steps:
 
       - name: Check out
@@ -43,3 +44,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
+
+## Important Note about Pull Requests
+
+Please ensure that you have allowed GitHub Actions to create and approve pull requests. This is necessary for the correct operation of the action.
+
+You can enable this setting in your repository's settings under the Actions tab. If your repository is part of an organization, you might need to check the organization's settings or contact your organization's owner for help.
