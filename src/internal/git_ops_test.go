@@ -37,10 +37,9 @@ func TestGitRepo_SetReference(t *testing.T) {
 }
 
 func TestGitRepo_Worktree(t *testing.T) {
-	mockRepo := &MockGitRepo{}
-	repo, _ := git.Init(memory.NewStorage(), nil)
-	worktree, _ := repo.Worktree()
-	mockRepo.On("Worktree").Return(worktree, nil)
+	mockRepo := new(MockGitRepo)
+	mockWorktree := new(MockWorktree)
+	mockRepo.On("Worktree").Return(mockWorktree, nil)
 
 	_, err := mockRepo.Worktree()
 	if err != nil {
@@ -48,6 +47,7 @@ func TestGitRepo_Worktree(t *testing.T) {
 	}
 
 	mockRepo.AssertExpectations(t)
+	mockWorktree.AssertExpectations(t)
 }
 
 func TestGitRepo_Head(t *testing.T) {

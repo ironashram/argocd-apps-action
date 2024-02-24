@@ -2,6 +2,7 @@ package internal
 
 import (
 	"io"
+	"path/filepath"
 
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
@@ -37,7 +38,11 @@ func (r *GitRepo) Worktree() (WorktreeOperations, error) {
 	if err != nil {
 		return nil, err
 	}
-	return worktree, nil
+	root, err := filepath.Abs(worktree.Filesystem.Root())
+	if err != nil {
+		return nil, err
+	}
+	return &WorktreeWithRoot{worktree, root}, nil
 }
 
 func (r *GitRepo) Head() (*plumbing.Reference, error) {
@@ -138,6 +143,7 @@ type WorktreeOperations interface {
 	Checkout(opts *git.CheckoutOptions) error
 	Add(path string) (plumbing.Hash, error)
 	Commit(message string, opts *git.CommitOptions) (plumbing.Hash, error)
+	Root() (string, error)
 }
 
 type MockWorktree struct {
@@ -157,4 +163,18 @@ func (m *MockWorktree) Add(path string) (plumbing.Hash, error) {
 func (m *MockWorktree) Commit(message string, opts *git.CommitOptions) (plumbing.Hash, error) {
 	args := m.Called(message, opts)
 	return args.Get(0).(plumbing.Hash), args.Error(1)
+}
+
+func (m *MockWorktree) Root() (string, error) {
+	args := m.Called()
+	return args.String(0), args.Error(1)
+}
+
+type WorktreeWithRoot struct {
+	*git.Worktree
+	root string
+}
+
+func (w *WorktreeWithRoot) Root() (string, error) {
+	return w.root, nil
 }

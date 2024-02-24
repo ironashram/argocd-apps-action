@@ -7,7 +7,6 @@ import (
 )
 
 func TestActionInterface_GetInput(t *testing.T) {
-	// Test cases
 	testCases := []struct {
 		name     string
 		action   *MockActionInterface
@@ -38,7 +37,6 @@ func TestActionInterface_GetInput(t *testing.T) {
 		},
 	}
 
-	// Run tests
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			result := tc.action.GetInput(tc.input)
@@ -50,7 +48,6 @@ func TestActionInterface_GetInput(t *testing.T) {
 }
 
 func TestActionInterface_Getenv(t *testing.T) {
-	// Test cases
 	testCases := []struct {
 		name     string
 		action   *MockActionInterface
@@ -81,7 +78,6 @@ func TestActionInterface_Getenv(t *testing.T) {
 		},
 	}
 
-	// Run tests
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			result := tc.action.Getenv(tc.env)
@@ -93,7 +89,6 @@ func TestActionInterface_Getenv(t *testing.T) {
 }
 
 func TestActionInterface_Debugf(t *testing.T) {
-	// Test cases
 	testCases := []struct {
 		name   string
 		action *MockActionInterface
@@ -120,7 +115,6 @@ func TestActionInterface_Debugf(t *testing.T) {
 		},
 	}
 
-	// Run tests
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			tc.action.On("Debugf", tc.format, mock.Anything).Once()
@@ -130,7 +124,6 @@ func TestActionInterface_Debugf(t *testing.T) {
 }
 
 func TestActionInterface_Fatalf(t *testing.T) {
-	// Test cases
 	testCases := []struct {
 		name   string
 		action *MockActionInterface
@@ -157,7 +150,6 @@ func TestActionInterface_Fatalf(t *testing.T) {
 		},
 	}
 
-	// Run tests
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			tc.action.On("Fatalf", tc.format, mock.Anything).Once()

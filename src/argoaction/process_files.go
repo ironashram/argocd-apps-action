@@ -116,7 +116,7 @@ var processFile = func(path string, gitOps internal.GitOperations, githubClient 
 
 		if cfg.CreatePr {
 			branchName := "update-" + chart
-			err = createNewBranch(gitOps, branchName)
+			err = createNewBranch(gitOps, cfg.TargetBranch, branchName)
 			if err != nil {
 				action.Debugf("Error creating new branch: %v\n", err)
 				return err

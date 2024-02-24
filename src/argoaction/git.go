@@ -18,7 +18,19 @@ import (
 	"github.com/google/go-github/v59/github"
 )
 
-var createNewBranch = func(gitOps internal.GitOperations, branchName string) error {
+var createNewBranch = func(gitOps internal.GitOperations, baseBranch, branchName string) error {
+	worktree, err := gitOps.Worktree()
+	if err != nil {
+		return err
+	}
+
+	err = worktree.Checkout(&git.CheckoutOptions{
+		Branch: plumbing.NewBranchReferenceName(baseBranch),
+	})
+	if err != nil {
+		return err
+	}
+
 	headRef, err := gitOps.Head()
 	if err != nil {
 		return err
@@ -31,7 +43,7 @@ var createNewBranch = func(gitOps internal.GitOperations, branchName string) err
 		return fmt.Errorf("failed to create new branch: %w", err)
 	}
 
-	worktree, err := gitOps.Worktree()
+	worktree, err = gitOps.Worktree()
 	if err != nil {
 		return err
 	}
@@ -52,11 +64,11 @@ var commitChanges = func(gitOps internal.GitOperations, path string, commitMessa
 		return fmt.Errorf("failed to commit changes: %w", err)
 	}
 
-	realWorktree, ok := worktree.(*git.Worktree)
-    if !ok {
-        return fmt.Errorf("failed to assert worktree type")
-    }
-	basePath := realWorktree.Filesystem.Root()
+	basePath, err := worktree.Root()
+	if err != nil {
+		return fmt.Errorf("failed to get worktree root: %w", err)
+	}
+
 	relativePath, err := filepath.Rel(basePath, path)
 	if err != nil {
 		return fmt.Errorf("failed to get relative path: %w", err)
@@ -86,7 +98,7 @@ var pushChanges = func(gitOps internal.GitOperations, branchName string, cfg *mo
 			Username: "github-actions[bot]",
 			Password: cfg.Token,
 		},
-		RefSpecs: []config.RefSpec{config.RefSpec(branchName + ":" + branchName)},
+		RefSpecs: []config.RefSpec{config.RefSpec("refs/heads/" + branchName + ":refs/heads/" + branchName)},
 	})
 	if err != nil {
 		return fmt.Errorf("failed to push changes: %w", err)
@@ -117,7 +129,7 @@ var createPullRequest = func(githubClient internal.GitHubClient, baseBranch stri
 		return errors.New("action is nil")
 	}
 
-	_, _, err := pullRequests.Create(context.Background(), cfg.Owner, cfg.Repo, newPR)
+	_, _, err := pullRequests.Create(context.Background(), cfg.Owner, cfg.Name, newPR)
 	if err != nil {
 		return err
 	}
