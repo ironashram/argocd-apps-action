@@ -6,6 +6,7 @@ import (
 	"path"
 	"path/filepath"
 
+	"github.com/Masterminds/semver"
 	"github.com/ironashram/argocd-apps-action/internal"
 	"github.com/ironashram/argocd-apps-action/models"
 	"github.com/ironashram/argocd-apps-action/utils"
@@ -23,8 +24,8 @@ var checkForUpdates = func(gitOps internal.GitOperations, githubClient internal.
 		}
 
 		if filepath.Ext(path) == ".yaml" {
-			osWrapper := &internal.OSWrapper{}
-			err := processFile(path, gitOps, githubClient, cfg, action, osWrapper)
+			osw := &internal.OSWrapper{}
+			err := processFile(path, gitOps, githubClient, cfg, action, osw)
 			if err != nil {
 				return err
 			}
@@ -34,6 +35,24 @@ var checkForUpdates = func(gitOps internal.GitOperations, githubClient internal.
 	})
 
 	return walkErr
+}
+
+func updateTargetRevision(app *models.Application, newest *semver.Version, path string, action internal.ActionInterface, osw internal.OSInterface) error {
+	app.Spec.Source.TargetRevision = newest.String()
+
+	newData, err := yaml.Marshal(app)
+	if err != nil {
+		action.Debugf("Error marshaling app: %v\n", err)
+		return err
+	}
+
+	err = osw.WriteFile(path, newData, 0644)
+	if err != nil {
+		action.Debugf("Error writing file: %v\n", err)
+		return err
+	}
+
+	return nil
 }
 
 var processFile = func(path string, gitOps internal.GitOperations, githubClient internal.GitHubClient, cfg *models.Config, action internal.ActionInterface, osw internal.OSInterface) error {
@@ -87,35 +106,34 @@ var processFile = func(path string, gitOps internal.GitOperations, githubClient 
 			branchName := "update-" + chart
 			err = createNewBranch(gitOps, branchName)
 			if err != nil {
+				action.Debugf("Error creating new branch: %v\n", err)
 				return err
 			}
 
-			app.Spec.Source.TargetRevision = newest.String()
-			newData, err := yaml.Marshal(app)
+			err = updateTargetRevision(app, newest, path, action, osw)
 			if err != nil {
-				return err
-			}
-
-			err = os.WriteFile(path, newData, 0644)
-			if err != nil {
+				action.Debugf("Error updating target revision: %v\n", err)
 				return err
 			}
 
 			commitMessage := "Update " + chart + " to version " + newest.String()
 			err = commitChanges(gitOps, path, commitMessage)
 			if err != nil {
+				action.Debugf("Error committing changes: %v\n", err)
 				return err
 			}
 
 			err = pushChanges(gitOps, branchName, cfg)
 			if err != nil {
+				action.Debugf("Error pushing changes: %v\n", err)
 				return err
 			}
 
 			prTitle := "Update " + chart + " to version " + newest.String()
 			prBody := "This PR updates " + chart + " to version " + newest.String()
-			err = createPullRequest(githubClient, cfg.TargetBranch, branchName, prTitle, prBody, action)
+			err = createPullRequest(githubClient, cfg.TargetBranch, branchName, prTitle, prBody, action, cfg)
 			if err != nil {
+				action.Debugf("Error creating pull request: %v\n", err)
 				return err
 			}
 		} else {

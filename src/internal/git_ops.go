@@ -1,16 +1,19 @@
 package internal
 
 import (
+	"io"
+
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/storer"
 	"github.com/go-git/go-git/v5/storage"
+	"github.com/stretchr/testify/mock"
 )
 
 type GitOperations interface {
 	Push(*git.PushOptions) error
 	SetReference(name string, ref *plumbing.Reference) error
-	Worktree() (*git.Worktree, error)
+	Worktree() (WorktreeOperations, error)
 	Head() (*plumbing.Reference, error)
 	Storer() storage.Storer
 	IterReferences() (storer.ReferenceIter, error)
@@ -29,8 +32,12 @@ func (r *GitRepo) SetReference(name string, ref *plumbing.Reference) error {
 	return r.Repo.Storer.SetReference(ref)
 }
 
-func (r *GitRepo) Worktree() (*git.Worktree, error) {
-	return r.Repo.Worktree()
+func (r *GitRepo) Worktree() (WorktreeOperations, error) {
+	worktree, err := r.Repo.Worktree()
+	if err != nil {
+		return nil, err
+	}
+	return worktree, nil
 }
 
 func (r *GitRepo) Head() (*plumbing.Reference, error) {
@@ -55,39 +62,99 @@ func (r *GitRepo) PlainOpen(path string) (*git.Repository, error) {
 }
 
 type MockGitRepo struct {
-	MockPush           func(*git.PushOptions) error
-	MockSetReference   func(name string, ref *plumbing.Reference) error
-	MockWorktree       func() (*git.Worktree, error)
-	MockHead           func() (*plumbing.Reference, error)
-	MockStorer         func() storage.Storer
-	MockIterReferences func() (storer.ReferenceIter, error)
-	MockPlainOpen      func(string) (*git.Repository, error)
+	mock.Mock
 }
 
-func (r *MockGitRepo) Push(options *git.PushOptions) error {
-	return r.MockPush(options)
+func (m *MockGitRepo) Push(options *git.PushOptions) error {
+	args := m.Called(options)
+	return args.Error(0)
 }
 
-func (r *MockGitRepo) SetReference(name string, ref *plumbing.Reference) error {
-	return r.MockSetReference(name, ref)
+func (m *MockGitRepo) SetReference(name string, ref *plumbing.Reference) error {
+	args := m.Called(name, ref)
+	return args.Error(0)
 }
 
-func (r *MockGitRepo) Worktree() (*git.Worktree, error) {
-	return r.MockWorktree()
+func (m *MockGitRepo) Worktree() (WorktreeOperations, error) {
+	args := m.Called()
+	return args.Get(0).(WorktreeOperations), args.Error(1)
 }
 
-func (r *MockGitRepo) Head() (*plumbing.Reference, error) {
-	return r.MockHead()
+func (m *MockGitRepo) Head() (*plumbing.Reference, error) {
+	args := m.Called()
+	return args.Get(0).(*plumbing.Reference), args.Error(1)
 }
 
-func (r *MockGitRepo) Storer() storage.Storer {
-	return r.MockStorer()
+func (m *MockGitRepo) Storer() storage.Storer {
+	args := m.Called()
+	return args.Get(0).(storage.Storer)
 }
 
-func (r *MockGitRepo) IterReferences() (storer.ReferenceIter, error) {
-	return r.MockIterReferences()
+func (m *MockGitRepo) IterReferences() (storer.ReferenceIter, error) {
+	args := m.Called()
+	return args.Get(0).(storer.ReferenceIter), args.Error(1)
 }
 
-func (r *MockGitRepo) PlainOpen(path string) (*git.Repository, error) {
-	return r.MockPlainOpen(path)
+func (m *MockGitRepo) PlainOpen(path string) (*git.Repository, error) {
+	args := m.Called(path)
+	return args.Get(0).(*git.Repository), args.Error(1)
+}
+
+type MockReference struct {
+	RefName plumbing.ReferenceName
+}
+
+func (m *MockReference) Name() plumbing.ReferenceName {
+	return m.RefName
+}
+
+func (m *MockReference) Hash() plumbing.Hash {
+	return plumbing.Hash{}
+}
+
+func (m *MockReference) Type() plumbing.ReferenceType {
+	return plumbing.HashReference
+}
+
+func (m *MockReference) Strings() (string, string) {
+	return m.RefName.String(), ""
+}
+
+type MockReferenceIter struct{}
+
+func (m *MockReferenceIter) Next() (*plumbing.Reference, error) {
+	return nil, io.EOF
+}
+
+func (m *MockReferenceIter) ForEach(func(*plumbing.Reference) error) error {
+	return io.EOF
+}
+
+func (m *MockReferenceIter) Close() {
+
+}
+
+type WorktreeOperations interface {
+	Checkout(opts *git.CheckoutOptions) error
+	Add(path string) (plumbing.Hash, error)
+	Commit(message string, opts *git.CommitOptions) (plumbing.Hash, error)
+}
+
+type MockWorktree struct {
+	mock.Mock
+}
+
+func (m *MockWorktree) Checkout(opts *git.CheckoutOptions) error {
+	args := m.Called(opts)
+	return args.Error(0)
+}
+
+func (m *MockWorktree) Add(path string) (plumbing.Hash, error) {
+	args := m.Called(path)
+	return args.Get(0).(plumbing.Hash), args.Error(1)
+}
+
+func (m *MockWorktree) Commit(message string, opts *git.CommitOptions) (plumbing.Hash, error) {
+	args := m.Called(message, opts)
+	return args.Get(0).(plumbing.Hash), args.Error(1)
 }

@@ -2,6 +2,7 @@ package argoaction
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -82,7 +83,7 @@ var pushChanges = func(gitOps internal.GitOperations, branchName string, cfg *mo
 	return nil
 }
 
-var createPullRequest = func(githubClient internal.GitHubClient, baseBranch string, newBranch string, title string, body string, action internal.ActionInterface) error {
+var createPullRequest = func(githubClient internal.GitHubClient, baseBranch string, newBranch string, title string, body string, action internal.ActionInterface, cfg *models.Config) error {
 
 	newPR := &github.NewPullRequest{
 		Title:               github.String(title),
@@ -92,7 +93,20 @@ var createPullRequest = func(githubClient internal.GitHubClient, baseBranch stri
 		MaintainerCanModify: github.Bool(true),
 	}
 
-	_, _, err := githubClient.PullRequests().Create(context.Background(), action.GetInput("owner"), action.GetInput("repo"), newPR)
+	if githubClient == nil {
+		return errors.New("githubClient is nil")
+	}
+
+	pullRequests := githubClient.PullRequests()
+	if pullRequests == nil {
+		return errors.New("PullRequests is nil")
+	}
+
+	if action == nil {
+		return errors.New("action is nil")
+	}
+
+	_, _, err := pullRequests.Create(context.Background(), cfg.Owner, cfg.Repo, newPR)
 	if err != nil {
 		return err
 	}

@@ -7,4 +7,6 @@ type Config struct {
 	Token        string
 	Repo         string
 	Workspace    string
+	Owner        string
+	Name         string
 }

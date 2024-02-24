@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/Masterminds/semver"
+	"github.com/ironashram/argocd-apps-action/internal"
 	"github.com/ironashram/argocd-apps-action/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -20,7 +21,6 @@ func (m *MockOS) ReadFile(path string) ([]byte, error) {
 }
 
 func TestReadAndParseYAML(t *testing.T) {
-	// Test cases
 	testCases := []struct {
 		name         string
 		path         string
@@ -55,18 +55,14 @@ func TestReadAndParseYAML(t *testing.T) {
 		},
 	}
 
-	// Run tests
 	t.Run("TestReadAndParseYAML", func(t *testing.T) {
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
-				// Setup
-				mockOS := new(MockOS)
+				mockOS := &internal.MockOS{}
 				mockOS.On("ReadFile", tc.path).Return(tc.readFileData, tc.readFileErr)
 
-				// Run test
 				result, err := readAndParseYAML(mockOS, tc.path)
 
-				// Assertions
 				assert.Equal(t, tc.expected, result)
 				assert.Equal(t, tc.expectedErr, err)
 			})

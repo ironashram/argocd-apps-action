@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/ironashram/argocd-apps-action/internal"
 	"github.com/ironashram/argocd-apps-action/models"
@@ -15,13 +16,20 @@ func NewFromInputs(action internal.ActionInterface) (*models.Config, error) {
 
 	createPr, err := strconv.ParseBool(createPrStr)
 	if err != nil {
-		fmt.Println("Error parsing createPr:", err)
-		return nil, err
+		return nil, fmt.Errorf("create_pr input is invalid: %w", err)
 	}
 
 	token := action.Getenv("GITHUB_TOKEN")
 	repo := action.Getenv("GITHUB_REPOSITORY")
 	workspace := action.Getenv("GITHUB_WORKSPACE")
+
+	parts := strings.Split(repo, "/")
+	if len(parts) != 2 {
+		return nil, fmt.Errorf("invalid GITHUB_REPOSITORY: %s", repo)
+	}
+
+	owner := parts[0]
+	name := parts[1]
 
 	action.Debugf("target_branch: %s", targetBranch)
 	action.Debugf("create_pr: %v", createPr)
@@ -34,6 +42,8 @@ func NewFromInputs(action internal.ActionInterface) (*models.Config, error) {
 		Token:        token,
 		Repo:         repo,
 		Workspace:    workspace,
+		Owner:        owner,
+		Name:         name,
 	}
 	return &c, nil
 }
