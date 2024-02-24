@@ -5,7 +5,6 @@ import (
 )
 
 func TestConfig(t *testing.T) {
-	// Test cases
 	testCases := []struct {
 		name         string
 		targetBranch string
@@ -35,7 +34,6 @@ func TestConfig(t *testing.T) {
 		},
 	}
 
-	// Run tests
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			config := Config{

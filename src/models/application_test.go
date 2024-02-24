@@ -5,7 +5,6 @@ import (
 )
 
 func TestSource(t *testing.T) {
-	// Test cases
 	testCases := []struct {
 		name     string
 		source   Source
@@ -31,7 +30,6 @@ func TestSource(t *testing.T) {
 		},
 	}
 
-	// Run tests
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			result := tc.source.Chart
