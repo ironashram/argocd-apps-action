@@ -123,10 +123,10 @@ func TestProcessFile(t *testing.T) {
 		mockRepo := new(internal.MockGitRepo)
 		mockAction.On("Debugf", "Checking %s from %s, current version is %s\n", mock.AnythingOfType("[]interface {}")).Once()
 		mockAction.On("Infof", "There is a newer %s version: %s\n", mock.AnythingOfType("[]interface {}")).Once()
-//		mockAction.On("Debugf", "Error marshaling app: %v\n", mock.AnythingOfType("[]interface {}")).Once()
+		//		mockAction.On("Debugf", "Error marshaling app: %v\n", mock.AnythingOfType("[]interface {}")).Once()
 		mockAction.On("Debugf", "Error creating pull request: %v\n", mock.Anything).Return().Once()
 
-//		mockRepo.On("CreateNewBranch", mock.AnythingOfType("string")).Return(nil).Once()
+		//		mockRepo.On("CreateNewBranch", mock.AnythingOfType("string")).Return(nil).Once()
 
 		mockWorktree := new(internal.MockWorktree)
 		mockWorktree.On("Checkout", mock.AnythingOfType("*git.CheckoutOptions")).Return(nil)
