@@ -1,7 +1,7 @@
 name: "ArgoCD Apps Action"
 description: "Github Action to update ArgoCD Applications"
 branding:
- icon: 'chevron-up'
+ icon: 'chevrons-up'
  color: 'gray-dark'
 inputs:
   target_branch:
