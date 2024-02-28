@@ -9,4 +9,5 @@ type Config struct {
 	Workspace    string
 	Owner        string
 	Name         string
+	Labels       []string
 }

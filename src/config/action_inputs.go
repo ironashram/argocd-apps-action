@@ -13,10 +13,17 @@ func NewFromInputs(action internal.ActionInterface) (*models.Config, error) {
 	targetBranch := action.GetInput("target_branch")
 	createPrStr := action.GetInput("create_pr")
 	appsFolder := action.GetInput("apps_folder")
+	labelsStr := action.GetInput("labels")
 
 	createPr, err := strconv.ParseBool(createPrStr)
 	if err != nil {
 		return nil, fmt.Errorf("create_pr input is invalid: %w", err)
+	}
+
+	labels := strings.Split(labelsStr, ",")
+
+	for i, label := range labels {
+		labels[i] = strings.TrimSpace(label)
 	}
 
 	token := action.Getenv("GITHUB_TOKEN")
@@ -44,6 +51,7 @@ func NewFromInputs(action internal.ActionInterface) (*models.Config, error) {
 		Workspace:    workspace,
 		Owner:        owner,
 		Name:         name,
+		Labels:       labels,
 	}
 	return &c, nil
 }

@@ -1,7 +1,6 @@
 package argoaction
 
 import (
-	"fmt"
 	"os"
 	"path"
 	"path/filepath"
@@ -22,6 +21,7 @@ var checkForUpdates = func(gitOps internal.GitOperations, githubClient internal.
 	var walkErr error
 	filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
+			action.Debugf("Error walking path: %v\n", err)
 			return err
 		}
 
@@ -29,6 +29,7 @@ var checkForUpdates = func(gitOps internal.GitOperations, githubClient internal.
 			osw := &internal.OSWrapper{}
 			err := processFile(path, gitOps, githubClient, cfg, action, osw)
 			if err != nil {
+				action.Debugf("Error processing file: %v\n", err)
 				return err
 			}
 		}
@@ -70,6 +71,7 @@ func updateTargetRevision(newest *semver.Version, path string, action internal.A
 var processFile = func(path string, gitOps internal.GitOperations, githubClient internal.GitHubClient, cfg *models.Config, action internal.ActionInterface, osw internal.OSInterface) error {
 	app, err := readAndParseYAML(osw, path)
 	if err != nil {
+		action.Debugf("Error reading and parsing YAML: %v\n", err)
 		return err
 	}
 
@@ -86,13 +88,15 @@ var processFile = func(path string, gitOps internal.GitOperations, githubClient 
 
 	body, err := utils.GetHTTPResponse(url)
 	if err != nil {
+		action.Debugf("failed to get HTTP response: %v\n", err)
 		return err
 	}
 
 	var index models.Index
 	err = yaml.Unmarshal(body, &index)
 	if err != nil {
-		return fmt.Errorf("failed to unmarshal YAML body: %w", err)
+		action.Debugf("failed to unmarshal YAML body: %v\n", err)
+		return err
 	}
 
 	if index.Entries == nil {
@@ -118,36 +122,44 @@ var processFile = func(path string, gitOps internal.GitOperations, githubClient 
 			branchName := "update-" + chart
 			err = createNewBranch(gitOps, cfg.TargetBranch, branchName)
 			if err != nil {
-				action.Debugf("Error creating new branch: %v\n", err)
+				action.Fatalf("Error creating new branch: %v\n", err)
 				return err
 			}
 
 			err = updateTargetRevision(newest, path, action, osw)
 			if err != nil {
-				action.Debugf("Error updating target revision: %v\n", err)
+				action.Fatalf("Error updating target revision: %v\n", err)
 				return err
 			}
 
 			commitMessage := "Update " + chart + " to version " + newest.String()
 			err = commitChanges(gitOps, path, commitMessage)
 			if err != nil {
-				action.Debugf("Error committing changes: %v\n", err)
+				action.Fatalf("Error committing changes: %v\n", err)
 				return err
 			}
 
 			err = pushChanges(gitOps, branchName, cfg)
 			if err != nil {
-				action.Debugf("Error pushing changes: %v\n", err)
+				action.Fatalf("Error pushing changes: %v\n", err)
 				return err
 			}
 
 			prTitle := "Update " + chart + " to version " + newest.String()
 			prBody := "This PR updates " + chart + " to version " + newest.String()
-			err = createPullRequest(githubClient, cfg.TargetBranch, branchName, prTitle, prBody, action, cfg)
+			pr, err := createPullRequest(githubClient, cfg.TargetBranch, branchName, prTitle, prBody, action, cfg)
 			if err != nil {
-				action.Debugf("Error creating pull request: %v\n", err)
+				action.Fatalf("Error creating pull request: %v\n", err)
 				return err
 			}
+
+			labels := cfg.Labels
+			err = addLabelsToPullRequest(githubClient, pr, labels, cfg)
+			if err != nil {
+				action.Fatalf("Error adding labels to pull request: %v\n", err)
+			}
+
+			action.Infof("Pull request created for %s\n", chart)
 		} else {
 			action.Infof("Create PR is disabled, skipping PR creation for %s\n", chart)
 		}

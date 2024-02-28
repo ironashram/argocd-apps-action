@@ -1,8 +1,8 @@
 name: "ArgoCD Apps Action"
 description: "Github Action to update ArgoCD Applications"
 branding:
- icon: 'chevrons-up'
- color: 'gray-dark'
+  icon: "chevrons-up"
+  color: "gray-dark"
 inputs:
   target_branch:
     description: "target branch"
@@ -12,6 +12,10 @@ inputs:
     description: "create a PR if there are new updates"
     required: false
     default: "true"
+  labels:
+    description: "labels to add to the PR"
+    required: false
+    default: "github_actions, dependencies"
   apps_folder:
     description: "folder to look for the app of apps"
     required: false
@@ -21,7 +25,7 @@ runs:
   steps:
     - name: Download ArgoCD Apps Action Binary
       env:
-        ACTION_VERSION: "v0.0.5"
+        ACTION_VERSION: "v0.1.0"
       shell: bash
       run: |
         wget https://github.com/ironashram/argocd-apps-action/releases/download/${ACTION_VERSION}/argocd-apps-action-${ACTION_VERSION}-linux-amd64.tar.gz
@@ -44,6 +48,7 @@ runs:
         INPUT_TARGET_BRANCH: ${{ inputs.target_branch }}
         INPUT_CREATE_PR: ${{ inputs.create_pr }}
         INPUT_APPS_FOLDER: ${{ inputs.apps_folder }}
+        INPUT_LABELS: ${{ inputs.labels }}
       shell: bash
       run: |
         # Run the ArgoCD Apps Action
