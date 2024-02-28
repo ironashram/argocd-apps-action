@@ -24,6 +24,7 @@ func TestNewFromInputs(t *testing.T) {
 					"target_branch": "main",
 					"create_pr":     "true",
 					"apps_folder":   "apps",
+					"labels":        "github_actions, dependencies",
 				},
 				Env: map[string]string{
 					"GITHUB_TOKEN":      "abc123",
@@ -40,6 +41,7 @@ func TestNewFromInputs(t *testing.T) {
 				Workspace:    "my-workspace",
 				Owner:        "githubuser",
 				Name:         "my-repo",
+				Labels: 	 []string{"github_actions", "dependencies"},
 			},
 			expectedErr: nil,
 		},
@@ -50,6 +52,7 @@ func TestNewFromInputs(t *testing.T) {
 					"target_branch": "develop",
 					"create_pr":     "false",
 					"apps_folder":   "applications",
+					"labels":        "github_actions, dependencies",
 				},
 				Env: map[string]string{
 					"GITHUB_TOKEN":      "xyz789",
@@ -66,6 +69,7 @@ func TestNewFromInputs(t *testing.T) {
 				Workspace:    "another-workspace",
 				Owner:        "githubuser",
 				Name:         "another-repo",
+				Labels:       []string{"github_actions", "dependencies"},
 			},
 			expectedErr: nil,
 		},

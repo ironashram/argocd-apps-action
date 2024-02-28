@@ -53,7 +53,7 @@ func TestCreatePullRequest(t *testing.T) {
 		},
 	}
 
-	err := createPullRequest(mockClient, baseBranch, newBranch, title, body, mockAction, cfg)
+	_, err := createPullRequest(mockClient, baseBranch, newBranch, title, body, mockAction, cfg)
 
 	assert.NoError(t, err)
 
@@ -66,7 +66,7 @@ func TestCreatePullRequest(t *testing.T) {
 		},
 	}
 
-	err = createPullRequest(mockClient, baseBranch, newBranch, title, body, mockAction, cfg)
+	_, err = createPullRequest(mockClient, baseBranch, newBranch, title, body, mockAction, cfg)
 
 	assert.EqualError(t, err, expectedError.Error())
 }
@@ -110,7 +110,7 @@ func TestCreatePullRequest_Error(t *testing.T) {
 		},
 	}
 
-	err := createPullRequest(mockClient, baseBranch, newBranch, title, body, mockAction, cfg)
+	_, err := createPullRequest(mockClient, baseBranch, newBranch, title, body, mockAction, cfg)
 
 	assert.EqualError(t, err, expectedError.Error())
 }

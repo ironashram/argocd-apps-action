@@ -13,6 +13,7 @@ func TestConfig(t *testing.T) {
 		token        string
 		repo         string
 		workspace    string
+		labels       []string
 	}{
 		{
 			name:         "Test Case 1",
@@ -22,6 +23,7 @@ func TestConfig(t *testing.T) {
 			token:        "abc123",
 			repo:         "my-repo",
 			workspace:    "my-workspace",
+			labels:       []string{"label1", "label2"},
 		},
 		{
 			name:         "Test Case 2",
@@ -31,6 +33,7 @@ func TestConfig(t *testing.T) {
 			token:        "xyz789",
 			repo:         "another-repo",
 			workspace:    "another-workspace",
+			labels:       []string{"label3", "label4"},
 		},
 	}
 
@@ -43,6 +46,7 @@ func TestConfig(t *testing.T) {
 				Token:        tc.token,
 				Repo:         tc.repo,
 				Workspace:    tc.workspace,
+				Labels:       tc.labels,
 			}
 
 			if config.TargetBranch != tc.targetBranch {
@@ -62,6 +66,9 @@ func TestConfig(t *testing.T) {
 			}
 			if config.Workspace != tc.workspace {
 				t.Errorf("Expected Workspace to be %s, got %s", tc.workspace, config.Workspace)
+			}
+			if len(config.Labels) != len(tc.labels) {
+				t.Errorf("Expected Labels to be %v, got %v", tc.labels, config.Labels)
 			}
 		})
 	}

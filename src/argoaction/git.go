@@ -106,7 +106,7 @@ var pushChanges = func(gitOps internal.GitOperations, branchName string, cfg *mo
 	return nil
 }
 
-var createPullRequest = func(githubClient internal.GitHubClient, baseBranch string, newBranch string, title string, body string, action internal.ActionInterface, cfg *models.Config) error {
+var createPullRequest = func(githubClient internal.GitHubClient, baseBranch string, newBranch string, title string, body string, action internal.ActionInterface, cfg *models.Config) (*github.PullRequest, error) {
 
 	newPR := &github.NewPullRequest{
 		Title:               github.String(title),
@@ -117,19 +117,37 @@ var createPullRequest = func(githubClient internal.GitHubClient, baseBranch stri
 	}
 
 	if githubClient == nil {
-		return errors.New("githubClient is nil")
+		return nil, errors.New("githubClient is nil")
 	}
 
 	pullRequests := githubClient.PullRequests()
 	if pullRequests == nil {
-		return errors.New("PullRequests is nil")
+		return nil, errors.New("PullRequests is nil")
 	}
 
 	if action == nil {
-		return errors.New("action is nil")
+		return nil, errors.New("action is nil")
 	}
 
-	_, _, err := pullRequests.Create(context.Background(), cfg.Owner, cfg.Name, newPR)
+	pr, _, err := pullRequests.Create(context.Background(), cfg.Owner, cfg.Name, newPR)
+	if err != nil {
+		return pr, err
+	}
+
+	return pr, nil
+}
+
+var addLabelsToPullRequest = func(githubClient internal.GitHubClient, pr *github.PullRequest, labels []string, cfg *models.Config) error {
+	if githubClient == nil {
+		return errors.New("githubClient is nil")
+	}
+
+	issues := githubClient.Issues()
+	if issues == nil {
+		return errors.New("issues is nil")
+	}
+
+	_, _, err := issues.AddLabelsToIssue(context.Background(), cfg.Owner, cfg.Name, *pr.Number, labels)
 	if err != nil {
 		return err
 	}
