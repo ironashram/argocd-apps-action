@@ -41,7 +41,7 @@ func TestNewFromInputs(t *testing.T) {
 				Workspace:    "my-workspace",
 				Owner:        "githubuser",
 				Name:         "my-repo",
-				Labels: 	 []string{"github_actions", "dependencies"},
+				Labels:       []string{"github_actions", "dependencies"},
 			},
 			expectedErr: nil,
 		},
