@@ -116,19 +116,19 @@ var processFile = func(path string, gitOps internal.GitOperations, githubClient 
 		return err
 	}
 
-    if newest != nil {
-        action.Infof("There is a newer %s version: %s\n", chart, newest)
+	if newest != nil {
+		action.Infof("There is a newer %s version: %s\n", chart, newest)
 
-        if cfg.CreatePr {
-            err = handleNewVersion(chart, newest, path, gitOps, cfg, action, osw, githubClient)
-            if err != nil {
-                return err
-            }
-        } else {
-            action.Infof("Create PR is disabled, skipping PR creation for %s\n", chart)
-        }
-    } else {
-        action.Debugf("No newer version of %s is available\n", chart)
-    }
-    return nil
+		if cfg.CreatePr {
+			err = handleNewVersion(chart, newest, path, gitOps, cfg, action, osw, githubClient)
+			if err != nil {
+				return err
+			}
+		} else {
+			action.Infof("Create PR is disabled, skipping PR creation for %s\n", chart)
+		}
+	} else {
+		action.Debugf("No newer version of %s is available\n", chart)
+	}
+	return nil
 }
