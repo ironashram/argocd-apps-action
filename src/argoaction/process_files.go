@@ -10,9 +10,6 @@ import (
 	"github.com/Masterminds/semver"
 	"github.com/ironashram/argocd-apps-action/internal"
 	"github.com/ironashram/argocd-apps-action/models"
-	"github.com/ironashram/argocd-apps-action/utils"
-
-	"sigs.k8s.io/yaml"
 )
 
 var checkForUpdates = func(gitOps internal.GitOperations, githubClient internal.GitHubClient, cfg *models.Config, action internal.ActionInterface) error {
@@ -77,7 +74,7 @@ var processFile = func(path string, gitOps internal.GitOperations, githubClient 
 	}
 
 	chart := app.Spec.Source.Chart
-	url := app.Spec.Source.RepoURL + "/index.yaml"
+	url := app.Spec.Source.RepoURL
 	targetRevision := app.Spec.Source.TargetRevision
 
 	if chart == "" || url == "" || targetRevision == "" {
@@ -87,33 +84,13 @@ var processFile = func(path string, gitOps internal.GitOperations, githubClient 
 
 	action.Debugf("Checking %s from %s, current version is %s\n", chart, url, targetRevision)
 
-	body, err := utils.GetHTTPResponse(url)
+	newest, err := getNewestVersionFromNative(url+"/index.yaml", chart, targetRevision, action)
 	if err != nil {
-		action.Debugf("failed to get HTTP response: %v\n", err)
-		return err
-	}
-
-	var index models.Index
-	err = yaml.Unmarshal(body, &index)
-	if err != nil {
-		action.Debugf("failed to unmarshal YAML body: %v\n", err)
-		return err
-	}
-
-	if index.Entries == nil {
-		action.Debugf("No entries found in index at %s\n", url)
-		return nil
-	}
-
-	if _, ok := index.Entries[chart]; !ok || len(index.Entries[chart]) == 0 {
-		action.Debugf("Chart entry %s does not exist or is empty at %s\n", chart, url)
-		return nil
-	}
-
-	newest, err := getNewestVersion(targetRevision, index.Entries)
-	if err != nil {
-		action.Debugf("Error comparing versions: %v\n", err)
-		return err
+		newest, err = getNewestVersionFromOCI(url, chart, targetRevision, action)
+		if err != nil {
+			action.Debugf("Error getting newest version: %v\n", err)
+			return nil
+		}
 	}
 
 	if newest != nil {

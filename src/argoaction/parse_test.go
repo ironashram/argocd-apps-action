@@ -106,7 +106,7 @@ func TestGetNewestVersion(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			result, err := getNewestVersion(tc.targetVersion, tc.entries)
+			result, err := parseNativeNewest(tc.targetVersion, tc.entries)
 
 			assert.Equal(t, tc.expected, result)
 			assert.Equal(t, tc.expectedErr, err)

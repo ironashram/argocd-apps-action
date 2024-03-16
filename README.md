@@ -5,7 +5,10 @@ This GitHub Action checks for updates in the specified directory of YAML files. 
 
 The action walks through the specified directory and its subdirectories, looking for YAML files. For each YAML file, it reads the file and unmarshals the content into an `Application` manifest.
 
-The action then checks if the `chart`, `url`, and `targetRevision` fields are present. If they are, it sends a GET request to the URL (`RepoURL`) and unmarshals the response getting the new chart verions.
+The action then checks if the `chart`, `url`, and `targetRevision` fields are present. If they are, it sends a GET request to the URL (`RepoURL`) and unmarshals the response getting the new chart versions.
+
+The action supports both Helm chart repositories and OCI registries. For OCI registries, it uses the `oras.land/oras-go` package to interact with the registry. Please note that currently only public repositories are supported.
+
 
 The action then checks if there is a new release and opens PR with the updates if there is.
 
@@ -36,7 +39,7 @@ jobs:
           fetch-depth: '0'
 
       - name: Check updates for ArgoCD Apps
-        uses: ironashram/argocd-apps-action@v0.1.0
+        uses: ironashram/argocd-apps-action@v1.0.0
         with:
           target_branch: main
           create_pr: true
