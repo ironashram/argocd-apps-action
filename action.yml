@@ -43,13 +43,6 @@ runs:
           exit 1
         fi
 
-    - name: Run Action
-      env:
-        INPUT_TARGET_BRANCH: ${{ inputs.target_branch }}
-        INPUT_CREATE_PR: ${{ inputs.create_pr }}
-        INPUT_APPS_FOLDER: ${{ inputs.apps_folder }}
-        INPUT_LABELS: ${{ inputs.labels }}
+    - name: Run the ArgoCD Apps Action
       shell: bash
-      run: |
-        # Run the ArgoCD Apps Action
-        argocd-apps-action
+      run: argocd-apps-action
