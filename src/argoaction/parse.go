@@ -90,7 +90,7 @@ func getNewestVersionFromNative(url string, chart string, targetRevision string,
 	return newest, nil
 }
 
-var parseOCINewest = func(tags *TagsList, targetVersion string, action internal.ActionInterface) (*semver.Version, error) {
+var parseOCINewest = func(tags *models.TagsList, targetVersion string, action internal.ActionInterface) (*semver.Version, error) {
 	target, err := semver.NewVersion(targetVersion)
 	if err != nil {
 		action.Debugf("Error parsing target version: %v\n", err)
@@ -116,7 +116,7 @@ var parseOCINewest = func(tags *TagsList, targetVersion string, action internal.
 }
 
 func getNewestVersionFromOCI(url string, chart string, targetRevision string, action internal.ActionInterface) (*semver.Version, error) {
-	tags := &TagsList{}
+	tags := &models.TagsList{}
 
 	url = strings.TrimSuffix(url, "/")
 	url = strings.Replace(url, "https://", "", 1)
