@@ -22,7 +22,8 @@ var checkForUpdates = func(gitOps internal.GitOperations, githubClient internal.
 	filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			action.Debugf("Error walking path: %v\n", err)
-			return err
+			walkErr = err
+			return nil
 		}
 
 		if filepath.Ext(path) == ".yaml" {
@@ -30,7 +31,7 @@ var checkForUpdates = func(gitOps internal.GitOperations, githubClient internal.
 			err := processFile(path, gitOps, githubClient, cfg, action, osw)
 			if err != nil {
 				action.Debugf("Error processing file: %v\n", err)
-				return err
+				walkErr = err
 			}
 		}
 
@@ -115,56 +116,19 @@ var processFile = func(path string, gitOps internal.GitOperations, githubClient 
 		return err
 	}
 
-	if newest != nil {
-		action.Infof("There is a newer %s version: %s\n", chart, newest)
+    if newest != nil {
+        action.Infof("There is a newer %s version: %s\n", chart, newest)
 
-		if cfg.CreatePr {
-			branchName := "update-" + chart
-			err = createNewBranch(gitOps, cfg.TargetBranch, branchName)
-			if err != nil {
-				action.Fatalf("Error creating new branch: %v\n", err)
-				return err
-			}
-
-			err = updateTargetRevision(newest, path, action, osw)
-			if err != nil {
-				action.Fatalf("Error updating target revision: %v\n", err)
-				return err
-			}
-
-			commitMessage := "Update " + chart + " to version " + newest.String()
-			err = commitChanges(gitOps, path, commitMessage)
-			if err != nil {
-				action.Fatalf("Error committing changes: %v\n", err)
-				return err
-			}
-
-			err = pushChanges(gitOps, branchName, cfg)
-			if err != nil {
-				action.Fatalf("Error pushing changes: %v\n", err)
-				return err
-			}
-
-			prTitle := "Update " + chart + " to version " + newest.String()
-			prBody := "This PR updates " + chart + " to version " + newest.String()
-			pr, err := createPullRequest(githubClient, cfg.TargetBranch, branchName, prTitle, prBody, action, cfg)
-			if err != nil {
-				action.Fatalf("Error creating pull request: %v\n", err)
-				return err
-			}
-
-			labels := cfg.Labels
-			err = addLabelsToPullRequest(githubClient, pr, labels, cfg)
-			if err != nil {
-				action.Fatalf("Error adding labels to pull request: %v\n", err)
-			}
-
-			action.Infof("Pull request created for %s\n", chart)
-		} else {
-			action.Infof("Create PR is disabled, skipping PR creation for %s\n", chart)
-		}
-	} else {
-		action.Debugf("No newer version of %s is available\n", chart)
-	}
-	return nil
+        if cfg.CreatePr {
+            err = handleNewVersion(chart, newest, path, gitOps, cfg, action, osw, githubClient)
+            if err != nil {
+                return err
+            }
+        } else {
+            action.Infof("Create PR is disabled, skipping PR creation for %s\n", chart)
+        }
+    } else {
+        action.Debugf("No newer version of %s is available\n", chart)
+    }
+    return nil
 }

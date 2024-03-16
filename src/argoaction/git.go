@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/Masterminds/semver"
 	githttp "github.com/go-git/go-git/v5/plumbing/transport/http"
 	"github.com/ironashram/argocd-apps-action/internal"
 	"github.com/ironashram/argocd-apps-action/models"
@@ -152,5 +153,50 @@ var addLabelsToPullRequest = func(githubClient internal.GitHubClient, pr *github
 		return err
 	}
 
+	return nil
+}
+
+var handleNewVersion = func(chart string, newest *semver.Version, path string, gitOps internal.GitOperations, cfg *models.Config, action internal.ActionInterface, osw internal.OSInterface, githubClient internal.GitHubClient) error {
+	branchName := "update-" + chart
+	err := createNewBranch(gitOps, cfg.TargetBranch, branchName)
+	if err != nil {
+		action.Fatalf("Error creating new branch: %v\n", err)
+		return err
+	}
+
+	err = updateTargetRevision(newest, path, action, osw)
+	if err != nil {
+		action.Fatalf("Error updating target revision: %v\n", err)
+		return err
+	}
+
+	commitMessage := "Update " + chart + " to version " + newest.String()
+	err = commitChanges(gitOps, path, commitMessage)
+	if err != nil {
+		action.Fatalf("Error committing changes: %v\n", err)
+		return err
+	}
+
+	err = pushChanges(gitOps, branchName, cfg)
+	if err != nil {
+		action.Fatalf("Error pushing changes: %v\n", err)
+		return err
+	}
+
+	prTitle := "Update " + chart + " to version " + newest.String()
+	prBody := "This PR updates " + chart + " to version " + newest.String()
+	pr, err := createPullRequest(githubClient, cfg.TargetBranch, branchName, prTitle, prBody, action, cfg)
+	if err != nil {
+		action.Fatalf("Error creating pull request: %v\n", err)
+		return err
+	}
+
+	labels := cfg.Labels
+	err = addLabelsToPullRequest(githubClient, pr, labels, cfg)
+	if err != nil {
+		action.Fatalf("Error adding labels to pull request: %v\n", err)
+	}
+
+	action.Infof("Pull request created for %s\n", chart)
 	return nil
 }
