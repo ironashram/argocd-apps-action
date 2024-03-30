@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/Masterminds/semver"
@@ -157,7 +158,9 @@ var addLabelsToPullRequest = func(githubClient internal.GitHubClient, pr *github
 }
 
 var handleNewVersion = func(chart string, newest *semver.Version, path string, gitOps internal.GitOperations, cfg *models.Config, action internal.ActionInterface, osw internal.OSInterface, githubClient internal.GitHubClient) error {
-	branchName := "update-" + chart
+	filename := filepath.Base(path)
+	filename = strings.TrimSuffix(filename, filepath.Ext(filename))
+	branchName := "update-" + chart + "-" + filename + "-" + newest.String()
 	err := createNewBranch(gitOps, cfg.TargetBranch, branchName)
 	if err != nil {
 		action.Fatalf("Error creating new branch: %v\n", err)
