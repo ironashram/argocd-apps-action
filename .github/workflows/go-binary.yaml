@@ -30,7 +30,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Go Release Binaries
-        uses: wangyoucao577/go-release-action@v1.49
+        uses: wangyoucao577/go-release-action@v1.50
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           goos: ${{ matrix.goos }}
