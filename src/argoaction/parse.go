@@ -8,7 +8,7 @@ import (
 	"github.com/ironashram/argocd-apps-action/models"
 	"github.com/ironashram/argocd-apps-action/utils"
 
-	"github.com/Masterminds/semver"
+	"github.com/Masterminds/semver/v3"
 	"oras.land/oras-go/v2/registry/remote"
 
 	"sigs.k8s.io/yaml"

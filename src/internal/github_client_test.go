@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/google/go-github/v59/github"
+	"github.com/google/go-github/v66/github"
 )
 
 func TestRealGitHubClient_PullRequests(t *testing.T) {

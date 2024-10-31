@@ -10,7 +10,7 @@ import (
 	"github.com/ironashram/argocd-apps-action/internal"
 	"github.com/ironashram/argocd-apps-action/models"
 
-	"github.com/google/go-github/v59/github"
+	"github.com/google/go-github/v66/github"
 
 	"golang.org/x/oauth2"
 )
