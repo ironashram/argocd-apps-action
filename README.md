@@ -41,6 +41,7 @@ jobs:
       - name: Check updates for ArgoCD Apps
         uses: ironashram/argocd-apps-action@v1.2.0
         with:
+          skip_prerelease: true
           target_branch: main
           create_pr: true
           apps_folder: apps/manifests

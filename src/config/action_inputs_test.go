@@ -21,10 +21,11 @@ func TestNewFromInputs(t *testing.T) {
 			name: "Test Case 1",
 			action: &internal.MockActionInterface{
 				Inputs: map[string]string{
-					"target_branch": "main",
-					"create_pr":     "true",
-					"apps_folder":   "apps",
-					"labels":        "github_actions, dependencies",
+					"skip_prerelease": "true",
+					"target_branch":   "main",
+					"create_pr":       "true",
+					"apps_folder":     "apps",
+					"labels":          "github_actions, dependencies",
 				},
 				Env: map[string]string{
 					"GITHUB_TOKEN":      "abc123",
@@ -33,15 +34,16 @@ func TestNewFromInputs(t *testing.T) {
 				},
 			},
 			expected: &models.Config{
-				TargetBranch: "main",
-				CreatePr:     true,
-				AppsFolder:   "apps",
-				Token:        "abc123",
-				Repo:         "githubuser/my-repo",
-				Workspace:    "my-workspace",
-				Owner:        "githubuser",
-				Name:         "my-repo",
-				Labels:       []string{"github_actions", "dependencies"},
+				SkipPreRelease: true,
+				TargetBranch:   "main",
+				CreatePr:       true,
+				AppsFolder:     "apps",
+				Token:          "abc123",
+				Repo:           "githubuser/my-repo",
+				Workspace:      "my-workspace",
+				Owner:          "githubuser",
+				Name:           "my-repo",
+				Labels:         []string{"github_actions", "dependencies"},
 			},
 			expectedErr: nil,
 		},
@@ -49,10 +51,11 @@ func TestNewFromInputs(t *testing.T) {
 			name: "Test Case 2",
 			action: &internal.MockActionInterface{
 				Inputs: map[string]string{
-					"target_branch": "develop",
-					"create_pr":     "false",
-					"apps_folder":   "applications",
-					"labels":        "github_actions, dependencies",
+					"skip_prerelease": "false",
+					"target_branch":   "develop",
+					"create_pr":       "false",
+					"apps_folder":     "applications",
+					"labels":          "github_actions, dependencies",
 				},
 				Env: map[string]string{
 					"GITHUB_TOKEN":      "xyz789",
@@ -61,15 +64,16 @@ func TestNewFromInputs(t *testing.T) {
 				},
 			},
 			expected: &models.Config{
-				TargetBranch: "develop",
-				CreatePr:     false,
-				AppsFolder:   "applications",
-				Token:        "xyz789",
-				Repo:         "githubuser/another-repo",
-				Workspace:    "another-workspace",
-				Owner:        "githubuser",
-				Name:         "another-repo",
-				Labels:       []string{"github_actions", "dependencies"},
+				SkipPreRelease: false,
+				TargetBranch:   "develop",
+				CreatePr:       false,
+				AppsFolder:     "applications",
+				Token:          "xyz789",
+				Repo:           "githubuser/another-repo",
+				Workspace:      "another-workspace",
+				Owner:          "githubuser",
+				Name:           "another-repo",
+				Labels:         []string{"github_actions", "dependencies"},
 			},
 			expectedErr: nil,
 		},
@@ -78,6 +82,7 @@ func TestNewFromInputs(t *testing.T) {
 	// Run tests
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			tc.action.On("Debugf", "skip_prerelease: %v", mock.Anything).Once()
 			tc.action.On("Debugf", "target_branch: %s", mock.Anything).Once()
 			tc.action.On("Debugf", "create_pr: %v", mock.Anything).Once()
 			tc.action.On("Debugf", "apps_folder: %s", mock.Anything).Once()

@@ -20,6 +20,10 @@ inputs:
     description: "folder to look for the app of apps"
     required: false
     default: "apps/manifests"
+  skip_prerelease:
+    description: "if true skips semantic prerelease versions during automated upgrades"
+    required: false
+    default: "true"
 runs:
   using: composite
   steps:
@@ -45,6 +49,7 @@ runs:
 
     - name: Run the ArgoCD Apps Action
       env:
+        INPUT_SKIP_PRERELEASE: ${{ inputs.skip_prerelease }}
         INPUT_TARGET_BRANCH: ${{ inputs.target_branch }}
         INPUT_CREATE_PR: ${{ inputs.create_pr }}
         INPUT_APPS_FOLDER: ${{ inputs.apps_folder }}
