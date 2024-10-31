@@ -84,9 +84,9 @@ var processFile = func(path string, gitOps internal.GitOperations, githubClient 
 
 	action.Debugf("Checking %s from %s, current version is %s\n", chart, url, targetRevision)
 
-	newest, err := getNewestVersionFromNative(url+"/index.yaml", chart, targetRevision, action)
+	newest, err := getNewestVersionFromNative(url+"/index.yaml", chart, targetRevision, action, cfg.SkipPreRelease)
 	if err != nil {
-		newest, err = getNewestVersionFromOCI(url, chart, targetRevision, action)
+		newest, err = getNewestVersionFromOCI(url, chart, targetRevision, action, cfg.SkipPreRelease)
 		if err != nil {
 			action.Debugf("Error getting newest version: %v\n", err)
 			return nil

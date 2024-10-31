@@ -22,12 +22,13 @@ func (m *MockOS) ReadFile(path string) ([]byte, error) {
 
 func TestReadAndParseYAML(t *testing.T) {
 	testCases := []struct {
-		name         string
-		path         string
-		readFileData []byte
-		readFileErr  error
-		expected     *models.Application
-		expectedErr  error
+		name           string
+		path           string
+		readFileData   []byte
+		readFileErr    error
+		expected       *models.Application
+		expectedErr    error
+		skipPreRelease bool
 	}{
 		{
 			name:         "Test Case 1",
@@ -43,15 +44,17 @@ func TestReadAndParseYAML(t *testing.T) {
 					},
 				},
 			},
-			expectedErr: nil,
+			expectedErr:    nil,
+			skipPreRelease: true,
 		},
 		{
-			name:         "Test Case 2",
-			path:         "test.yaml",
-			readFileData: nil,
-			readFileErr:  errors.New("read file error"),
-			expected:     nil,
-			expectedErr:  errors.New("read file error"),
+			name:           "Test Case 2",
+			path:           "test.yaml",
+			readFileData:   nil,
+			readFileErr:    errors.New("read file error"),
+			expected:       nil,
+			expectedErr:    errors.New("read file error"),
+			skipPreRelease: true,
 		},
 	}
 
@@ -77,8 +80,9 @@ func TestGetNewestVersion(t *testing.T) {
 		entries       map[string][]struct {
 			Version string `yaml:"version"`
 		}
-		expected    *semver.Version
-		expectedErr error
+		skipPreRelease bool
+		expected       *semver.Version
+		expectedErr    error
 	}{
 		{
 			name:          "Test Case 1",
@@ -89,7 +93,8 @@ func TestGetNewestVersion(t *testing.T) {
 				"entry1": {{Version: "1.1.0"}, {Version: "1.2.0"}},
 				"entry2": {{Version: "1.3.0"}, {Version: "1.4.0"}},
 			},
-			expected: semver.MustParse("1.4.0"),
+			skipPreRelease: true,
+			expected:       semver.MustParse("1.4.0"),
 		},
 		{
 			name:          "Test Case 2",
@@ -100,13 +105,14 @@ func TestGetNewestVersion(t *testing.T) {
 				"entry1": {{Version: "0.9.0"}, {Version: "0.8.0"}},
 				"entry2": {{Version: "0.7.0"}, {Version: "0.6.0"}},
 			},
-			expected: nil,
+			skipPreRelease: true,
+			expected:       nil,
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			result, err := parseNativeNewest(tc.targetVersion, tc.entries)
+			result, err := parseNativeNewest(tc.targetVersion, tc.entries, tc.skipPreRelease)
 
 			assert.Equal(t, tc.expected, result)
 			assert.Equal(t, tc.expectedErr, err)

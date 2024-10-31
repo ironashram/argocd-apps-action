@@ -6,47 +6,55 @@ import (
 
 func TestConfig(t *testing.T) {
 	testCases := []struct {
-		name         string
-		targetBranch string
-		createPr     bool
-		appsFolder   string
-		token        string
-		repo         string
-		workspace    string
-		labels       []string
+		name           string
+		skipPreRelease bool
+		targetBranch   string
+		createPr       bool
+		appsFolder     string
+		token          string
+		repo           string
+		workspace      string
+		labels         []string
 	}{
 		{
-			name:         "Test Case 1",
-			targetBranch: "main",
-			createPr:     true,
-			appsFolder:   "apps",
-			token:        "abc123",
-			repo:         "my-repo",
-			workspace:    "my-workspace",
-			labels:       []string{"label1", "label2"},
+			name:           "Test Case 1",
+			skipPreRelease: true,
+			targetBranch:   "main",
+			createPr:       true,
+			appsFolder:     "apps",
+			token:          "abc123",
+			repo:           "my-repo",
+			workspace:      "my-workspace",
+			labels:         []string{"label1", "label2"},
 		},
 		{
-			name:         "Test Case 2",
-			targetBranch: "develop",
-			createPr:     false,
-			appsFolder:   "applications",
-			token:        "xyz789",
-			repo:         "another-repo",
-			workspace:    "another-workspace",
-			labels:       []string{"label3", "label4"},
+			name:           "Test Case 2",
+			skipPreRelease: true,
+			targetBranch:   "develop",
+			createPr:       false,
+			appsFolder:     "applications",
+			token:          "xyz789",
+			repo:           "another-repo",
+			workspace:      "another-workspace",
+			labels:         []string{"label3", "label4"},
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			config := Config{
-				TargetBranch: tc.targetBranch,
-				CreatePr:     tc.createPr,
-				AppsFolder:   tc.appsFolder,
-				Token:        tc.token,
-				Repo:         tc.repo,
-				Workspace:    tc.workspace,
-				Labels:       tc.labels,
+				SkipPreRelease: tc.skipPreRelease,
+				TargetBranch:   tc.targetBranch,
+				CreatePr:       tc.createPr,
+				AppsFolder:     tc.appsFolder,
+				Token:          tc.token,
+				Repo:           tc.repo,
+				Workspace:      tc.workspace,
+				Labels:         tc.labels,
+			}
+
+			if config.SkipPreRelease != tc.skipPreRelease {
+				t.Errorf("Expected SkipPreRelease to be %v, got %v", tc.skipPreRelease, config.SkipPreRelease)
 			}
 
 			if config.TargetBranch != tc.targetBranch {
