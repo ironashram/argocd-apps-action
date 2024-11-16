@@ -77,7 +77,7 @@ func TestGetNewestVersion(t *testing.T) {
 	testCases := []struct {
 		name          string
 		targetVersion string
-		entries       map[string][]struct {
+		versions      []struct {
 			Version string `yaml:"version"`
 		}
 		skipPreRelease bool
@@ -87,11 +87,11 @@ func TestGetNewestVersion(t *testing.T) {
 		{
 			name:          "Test Case 1",
 			targetVersion: "1.0.0",
-			entries: map[string][]struct {
+			versions: []struct {
 				Version string `yaml:"version"`
 			}{
-				"entry1": {{Version: "1.1.0"}, {Version: "1.2.0"}},
-				"entry2": {{Version: "1.3.0"}, {Version: "1.4.0"}},
+				{Version: "1.1.0"},
+				{Version: "1.4.0"},
 			},
 			skipPreRelease: true,
 			expected:       semver.MustParse("1.4.0"),
@@ -99,11 +99,11 @@ func TestGetNewestVersion(t *testing.T) {
 		{
 			name:          "Test Case 2",
 			targetVersion: "1.0.0",
-			entries: map[string][]struct {
+			versions: []struct {
 				Version string `yaml:"version"`
 			}{
-				"entry1": {{Version: "0.9.0"}, {Version: "0.8.0"}},
-				"entry2": {{Version: "0.7.0"}, {Version: "0.6.0"}},
+				{Version: "0.8.0"},
+				{Version: "0.9.5"},
 			},
 			skipPreRelease: true,
 			expected:       nil,
@@ -112,7 +112,7 @@ func TestGetNewestVersion(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			result, err := parseNativeNewest(tc.targetVersion, tc.entries, tc.skipPreRelease)
+			result, err := parseNativeNewest(tc.targetVersion, tc.versions, tc.skipPreRelease)
 
 			assert.Equal(t, tc.expected, result)
 			assert.Equal(t, tc.expectedErr, err)
