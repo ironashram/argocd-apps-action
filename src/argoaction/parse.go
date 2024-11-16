@@ -29,7 +29,7 @@ var readAndParseYAML = func(osi internal.OSInterface, path string) (*models.Appl
 	return &app, nil
 }
 
-var parseNativeNewest = func(targetVersion string, entries map[string][]struct {
+var parseNativeNewest = func(targetVersion string, versions []struct {
 	Version string `yaml:"version"`
 }, skipPreRelease bool) (*semver.Version, error) {
 	target, err := semver.NewVersion(targetVersion)
@@ -38,21 +38,19 @@ var parseNativeNewest = func(targetVersion string, entries map[string][]struct {
 	}
 
 	var newest *semver.Version
-	for _, entry := range entries {
-		for _, version := range entry {
-			upstream, err := semver.NewVersion(version.Version)
-			if err != nil {
-				return nil, err
-			}
+	for _, version := range versions {
+		upstream, err := semver.NewVersion(version.Version)
+		if err != nil {
+			return nil, err
+		}
 
-			if skipPreRelease && upstream.Prerelease() != "" {
-				continue
-			}
+		if skipPreRelease && upstream.Prerelease() != "" {
+			continue
+		}
 
-			if target.LessThan(upstream) {
-				if newest == nil || newest.LessThan(upstream) {
-					newest = upstream
-				}
+		if target.LessThan(upstream) {
+			if newest == nil || newest.LessThan(upstream) {
+				newest = upstream
 			}
 		}
 	}
@@ -85,7 +83,7 @@ func getNewestVersionFromNative(url string, chart string, targetRevision string,
 		return nil, nil
 	}
 
-	newest, err := parseNativeNewest(targetRevision, index.Entries, skipPreRelease)
+	newest, err := parseNativeNewest(targetRevision, index.Entries[chart], skipPreRelease)
 	if err != nil {
 		action.Debugf("Error comparing versions: %v\n", err)
 		return nil, err
