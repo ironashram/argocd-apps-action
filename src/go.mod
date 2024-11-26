@@ -3,7 +3,7 @@ module github.com/ironashram/argocd-apps-action
 go 1.22.0
 
 require (
-	github.com/Masterminds/semver/v3 v3.3.0
+	github.com/Masterminds/semver/v3 v3.3.1
 	github.com/go-git/go-git/v5 v5.12.0
 	github.com/google/go-github/v66 v66.0.0
 	github.com/jarcoal/httpmock v1.3.1
