@@ -173,7 +173,7 @@ var handleNewVersion = func(chart string, newest *semver.Version, path string, g
 		return err
 	}
 
-	commitMessage := "Update " + chart + " to version " + newest.String()
+	commitMessage := "chore: bump " + chart + " to version " + newest.String()
 	err = commitChanges(gitOps, path, commitMessage)
 	if err != nil {
 		action.Fatalf("Error committing changes: %v\n", err)
@@ -186,7 +186,7 @@ var handleNewVersion = func(chart string, newest *semver.Version, path string, g
 		return err
 	}
 
-	prTitle := "Update " + chart + " to version " + newest.String()
+	prTitle := "chore: bump " + chart + " to version " + newest.String()
 	prBody := "This PR updates " + chart + " to version " + newest.String()
 	pr, err := createPullRequest(githubClient, cfg.TargetBranch, branchName, prTitle, prBody, action, cfg)
 	if err != nil {
