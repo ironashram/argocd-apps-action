@@ -1,3 +1,6 @@
+[![Go unit tests](https://github.com/ironashram/argocd-apps-action/actions/workflows/go-unit-tests.yaml/badge.svg)](https://github.com/ironashram/argocd-apps-action/actions/workflows/go-unit-tests.yaml)
+[![go: build binaries](https://github.com/ironashram/argocd-apps-action/actions/workflows/go-binary.yaml/badge.svg)](https://github.com/ironashram/argocd-apps-action/actions/workflows/go-binary.yaml)
+
 ## ArgoCD Apps Action
 This GitHub Action checks for updates in the specified directory of YAML files. It's written in Go and uses the `"sigs.k8s.io/yaml"` package to parse YAML files and the `github.com/sethvargo/go-githubactions` package for GitHub Actions specific functionalities.
 
