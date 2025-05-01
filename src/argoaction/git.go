@@ -103,6 +103,9 @@ var pushChanges = func(gitOps internal.GitOperations, branchName string, cfg *mo
 		RefSpecs: []config.RefSpec{config.RefSpec("refs/heads/" + branchName + ":refs/heads/" + branchName)},
 	})
 	if err != nil {
+		if strings.Contains(err.Error(), "non-fast-forward update") {
+			return fmt.Errorf("branch already exists: %s", branchName)
+		}
 		return fmt.Errorf("failed to push changes: %w", err)
 	}
 	return nil
@@ -163,26 +166,34 @@ var handleNewVersion = func(chart string, newest *semver.Version, path string, g
 	branchName := "update-" + chart + "-" + filename + "-" + newest.String()
 	err := createNewBranch(gitOps, cfg.TargetBranch, branchName)
 	if err != nil {
-		action.Fatalf("Error creating new branch: %v\n", err)
+		action.Fatalf("Error creating new branch: %v", err)
 		return err
 	}
 
 	err = updateTargetRevision(newest, path, action, osw)
 	if err != nil {
-		action.Fatalf("Error updating target revision: %v\n", err)
+		action.Fatalf("Error updating target revision: %v", err)
 		return err
 	}
 
 	commitMessage := "chore: bump " + chart + " to version " + newest.String()
 	err = commitChanges(gitOps, path, commitMessage)
 	if err != nil {
-		action.Fatalf("Error committing changes: %v\n", err)
+		if strings.Contains(err.Error(), "cannot create empty commit: clean working tree") {
+			action.Infof("No changes to commit for %s, branch already up to date", chart)
+			return nil
+		}
+		action.Fatalf("Error committing changes: %v", err)
 		return err
 	}
 
 	err = pushChanges(gitOps, branchName, cfg)
 	if err != nil {
-		action.Fatalf("Error pushing changes: %v\n", err)
+		if strings.Contains(err.Error(), "branch already exists") {
+			action.Infof("Branch %s already exists, skipping", branchName)
+			return nil
+		}
+		action.Fatalf("Error pushing changes: %v", err)
 		return err
 	}
 
@@ -190,16 +201,16 @@ var handleNewVersion = func(chart string, newest *semver.Version, path string, g
 	prBody := "This PR updates " + chart + " to version " + newest.String()
 	pr, err := createPullRequest(githubClient, cfg.TargetBranch, branchName, prTitle, prBody, action, cfg)
 	if err != nil {
-		action.Fatalf("Error creating pull request: %v\n", err)
+		action.Fatalf("Error creating pull request: %v", err)
 		return err
 	}
 
 	labels := cfg.Labels
 	err = addLabelsToPullRequest(githubClient, pr, labels, cfg)
 	if err != nil {
-		action.Fatalf("Error adding labels to pull request: %v\n", err)
+		action.Fatalf("Error adding labels to pull request: %v", err)
 	}
 
-	action.Infof("Pull request created for %s\n", chart)
+	action.Infof("Pull request created for %s", chart)
 	return nil
 }

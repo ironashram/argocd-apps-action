@@ -31,10 +31,16 @@ func TestReadAndParseYAML(t *testing.T) {
 		skipPreRelease bool
 	}{
 		{
-			name:         "Test Case 1",
-			path:         "test.yaml",
-			readFileData: []byte("spec:\n  source:\n    chart: chart1\n    repoURL: repoURL1\n    targetRevision: targetRevision1\n"),
-			readFileErr:  nil,
+			name: "Test Case 1",
+			path: "test.yaml",
+			readFileData: []byte(`
+spec:
+  source:
+    chart: chart1
+    repoURL: repoURL1
+    targetRevision: targetRevision1
+`),
+			readFileErr: nil,
 			expected: &models.Application{
 				Spec: models.Spec{
 					Source: models.Source{
