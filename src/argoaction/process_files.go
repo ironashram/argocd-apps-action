@@ -45,7 +45,7 @@ func updateTargetRevision(newest *semver.Version, path string, action internal.A
 		return err
 	}
 
-	lines := strings.Split(string(oldData), "\n")
+	lines := strings.Split(string(oldData), "")
 
 	for i, line := range lines {
 		if strings.Contains(line, "targetRevision:") {
@@ -55,7 +55,7 @@ func updateTargetRevision(newest *semver.Version, path string, action internal.A
 		}
 	}
 
-	newData := strings.Join(lines, "\n")
+	newData := strings.Join(lines, "")
 
 	err = osw.WriteFile(path, []byte(newData), 0644)
 	if err != nil {
