@@ -63,29 +63,29 @@ func getNewestVersionFromNative(url string, chart string, targetRevision string,
 
 	body, err := utils.GetHTTPResponse(url)
 	if err != nil {
-		action.Debugf("failed to get HTTP response: %v\n", err)
+		action.Debugf("failed to get HTTP response: %v", err)
 		return nil, err
 	}
 
 	err = yaml.Unmarshal(body, &index)
 	if err != nil {
-		action.Debugf("failed to unmarshal YAML body: %v\n", err)
+		action.Debugf("failed to unmarshal YAML body: %v", err)
 		return nil, err
 	}
 
 	if index.Entries == nil {
-		action.Debugf("No entries found in index at %s\n", url)
+		action.Debugf("No entries found in index at %s", url)
 		return nil, nil
 	}
 
 	if _, ok := index.Entries[chart]; !ok || len(index.Entries[chart]) == 0 {
-		action.Debugf("Chart entry %s does not exist or is empty at %s\n", chart, url)
+		action.Debugf("Chart entry %s does not exist or is empty at %s", chart, url)
 		return nil, nil
 	}
 
 	newest, err := parseNativeNewest(targetRevision, index.Entries[chart], skipPreRelease)
 	if err != nil {
-		action.Debugf("Error comparing versions: %v\n", err)
+		action.Debugf("Error comparing versions: %v", err)
 		return nil, err
 	}
 
@@ -95,7 +95,7 @@ func getNewestVersionFromNative(url string, chart string, targetRevision string,
 var parseOCINewest = func(tags *models.TagsList, targetVersion string, action internal.ActionInterface, skipPreRelease bool) (*semver.Version, error) {
 	target, err := semver.NewVersion(targetVersion)
 	if err != nil {
-		action.Debugf("Error parsing target version: %v\n", err)
+		action.Debugf("Error parsing target version: %v", err)
 		return nil, err
 	}
 
@@ -103,7 +103,7 @@ var parseOCINewest = func(tags *models.TagsList, targetVersion string, action in
 	for _, tag := range tags.Tags {
 		upstream, err := semver.NewVersion(tag)
 		if err != nil {
-			action.Debugf("Error parsing tag version: %v\n", err)
+			action.Debugf("Error parsing tag version: %v", err)
 			return nil, err
 		}
 
@@ -146,12 +146,12 @@ func getNewestVersionFromOCI(url string, chart string, targetRevision string, ac
 
 	newest, err := parseOCINewest(tags, targetRevision, action, skipPreRelease)
 	if err != nil {
-		action.Debugf("Error comparing versions: %v\n", err)
+		action.Debugf("Error comparing versions: %v", err)
 		return nil, err
 	}
 
 	if err != nil {
-		action.Debugf("Error getting tags: %v\n", err)
+		action.Debugf("Error getting tags: %v", err)
 		return nil, err
 	}
 
