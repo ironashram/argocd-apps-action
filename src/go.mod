@@ -1,6 +1,6 @@
 module github.com/ironashram/argocd-apps-action
 
-go 1.23.5
+go 1.24.2
 
 require (
 	github.com/Masterminds/semver/v3 v3.3.1
@@ -17,7 +17,7 @@ require (
 require (
 	dario.cat/mergo v1.0.1 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
-	github.com/ProtonMail/go-crypto v1.1.6 // indirect
+	github.com/ProtonMail/go-crypto v1.2.0 // indirect
 	github.com/cloudflare/circl v1.6.1 // indirect
 	github.com/cyphar/filepath-securejoin v0.4.1 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
