@@ -1,11 +1,11 @@
 module github.com/ironashram/argocd-apps-action
 
-go 1.24.2
+go 1.25.1
 
 require (
 	github.com/Masterminds/semver/v3 v3.4.0
 	github.com/go-git/go-git/v5 v5.16.2
-	github.com/google/go-github/v66 v66.0.0
+	github.com/google/go-github/v74 v74.0.0
 	github.com/jarcoal/httpmock v1.4.1
 	github.com/sethvargo/go-githubactions v1.3.1
 	github.com/stretchr/testify v1.11.1
