@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/go-git/go-git/v5/plumbing"
-	"github.com/google/go-github/v66/github"
+	"github.com/google/go-github/v74/github"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
