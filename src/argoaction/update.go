@@ -6,7 +6,7 @@ import (
 
 	"net/http"
 
-	"github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v6"
 	"github.com/ironashram/argocd-apps-action/internal"
 	"github.com/ironashram/argocd-apps-action/models"
 

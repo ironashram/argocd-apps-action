@@ -9,14 +9,14 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
-	githttp "github.com/go-git/go-git/v5/plumbing/transport/http"
+	githttp "github.com/go-git/go-git/v6/plumbing/transport/http"
 	"github.com/ironashram/argocd-apps-action/internal"
 	"github.com/ironashram/argocd-apps-action/models"
 
-	"github.com/go-git/go-git/v5"
-	"github.com/go-git/go-git/v5/config"
-	"github.com/go-git/go-git/v5/plumbing"
-	"github.com/go-git/go-git/v5/plumbing/object"
+	"github.com/go-git/go-git/v6"
+	"github.com/go-git/go-git/v6/config"
+	"github.com/go-git/go-git/v6/plumbing"
+	"github.com/go-git/go-git/v6/plumbing/object"
 	"github.com/google/go-github/v74/github"
 )
 
