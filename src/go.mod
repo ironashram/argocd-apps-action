@@ -5,7 +5,7 @@ go 1.25.3
 require (
 	github.com/Masterminds/semver/v3 v3.4.0
 	github.com/go-git/go-git/v6 v6.0.0-20251103200709-47b1ed2930c9
-	github.com/google/go-github/v74 v74.0.0
+	github.com/google/go-github/v77 v77.0.0
 	github.com/jarcoal/httpmock v1.4.1
 	github.com/sethvargo/go-githubactions v1.3.1
 	github.com/stretchr/testify v1.11.1

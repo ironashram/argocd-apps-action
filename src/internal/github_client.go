@@ -3,7 +3,7 @@ package internal
 import (
 	"context"
 
-	"github.com/google/go-github/v74/github"
+	"github.com/google/go-github/v77/github"
 	"github.com/stretchr/testify/mock"
 )
 

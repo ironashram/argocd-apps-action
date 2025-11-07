@@ -17,7 +17,7 @@ import (
 	"github.com/go-git/go-git/v6/config"
 	"github.com/go-git/go-git/v6/plumbing"
 	"github.com/go-git/go-git/v6/plumbing/object"
-	"github.com/google/go-github/v74/github"
+	"github.com/google/go-github/v77/github"
 )
 
 var createNewBranch = func(gitOps internal.GitOperations, baseBranch, branchName string) error {
@@ -114,11 +114,11 @@ var pushChanges = func(gitOps internal.GitOperations, branchName string, cfg *mo
 var createPullRequest = func(githubClient internal.GitHubClient, baseBranch string, newBranch string, title string, body string, action internal.ActionInterface, cfg *models.Config) (*github.PullRequest, error) {
 
 	newPR := &github.NewPullRequest{
-		Title:               github.String(title),
-		Head:                github.String(newBranch),
-		Base:                github.String(baseBranch),
-		Body:                github.String(body),
-		MaintainerCanModify: github.Bool(true),
+		Title:               github.Ptr(title),
+		Head:                github.Ptr(newBranch),
+		Base:                github.Ptr(baseBranch),
+		Body:                github.Ptr(body),
+		MaintainerCanModify: github.Ptr(true),
 	}
 
 	if githubClient == nil {

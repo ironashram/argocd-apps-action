@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/go-git/go-git/v6/plumbing"
-	"github.com/google/go-github/v74/github"
+	"github.com/google/go-github/v77/github"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
@@ -91,10 +91,10 @@ func TestCreatePullRequest_Error(t *testing.T) {
 	body := "This is a test pull request"
 
 	expectedPR := &github.NewPullRequest{
-		Title:               github.String(title),
-		Head:                github.String(newBranch),
-		Base:                github.String(baseBranch),
-		Body:                github.String(body),
+		Title:               github.Ptr(title),
+		Head:                github.Ptr(newBranch),
+		Base:                github.Ptr(baseBranch),
+		Body:                github.Ptr(body),
 		MaintainerCanModify: github.Bool(true),
 	}
 

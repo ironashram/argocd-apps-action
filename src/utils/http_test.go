@@ -10,13 +10,14 @@ import (
 func TestGetHTTPResponse(t *testing.T) {
 	// Create a test server
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/success" {
+		switch r.URL.Path {
+		case "/success":
 			w.WriteHeader(http.StatusOK)
 			fmt.Fprint(w, "Success response")
-		} else if r.URL.Path == "/error" {
+		case "/error":
 			w.WriteHeader(http.StatusInternalServerError)
 			fmt.Fprint(w, "Error response")
-		} else {
+		default:
 			w.WriteHeader(http.StatusNotFound)
 			fmt.Fprint(w, "Not found")
 		}
