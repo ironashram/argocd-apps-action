@@ -93,7 +93,7 @@ func TestActionInterface_Debugf(t *testing.T) {
 		name   string
 		action *MockActionInterface
 		format string
-		args   []interface{}
+		args   []any
 	}{
 		{
 			name: "Test Case 1",
@@ -102,7 +102,7 @@ func TestActionInterface_Debugf(t *testing.T) {
 				Env:    map[string]string{},
 			},
 			format: "Debug message",
-			args:   []interface{}{},
+			args:   []any{},
 		},
 		{
 			name: "Test Case 2",
@@ -111,7 +111,7 @@ func TestActionInterface_Debugf(t *testing.T) {
 				Env:    map[string]string{},
 			},
 			format: "Another debug message",
-			args:   []interface{}{},
+			args:   []any{},
 		},
 	}
 
@@ -128,7 +128,7 @@ func TestActionInterface_Fatalf(t *testing.T) {
 		name   string
 		action *MockActionInterface
 		format string
-		args   []interface{}
+		args   []any
 	}{
 		{
 			name: "Test Case 1",
@@ -137,7 +137,7 @@ func TestActionInterface_Fatalf(t *testing.T) {
 				Env:    map[string]string{},
 			},
 			format: "Fatal error",
-			args:   []interface{}{},
+			args:   []any{},
 		},
 		{
 			name: "Test Case 2",
@@ -146,7 +146,7 @@ func TestActionInterface_Fatalf(t *testing.T) {
 				Env:    map[string]string{},
 			},
 			format: "Another fatal error",
-			args:   []interface{}{},
+			args:   []any{},
 		},
 	}
 

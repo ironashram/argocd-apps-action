@@ -10,9 +10,9 @@ import (
 type ActionInterface interface {
 	GetInput(name string) string
 	Getenv(name string) string
-	Debugf(format string, args ...interface{})
-	Fatalf(format string, args ...interface{})
-	Infof(format string, args ...interface{})
+	Debugf(format string, args ...any)
+	Fatalf(format string, args ...any)
+	Infof(format string, args ...any)
 	GetAddress() string
 }
 
@@ -36,15 +36,15 @@ func (g *GithubActionInterface) Getenv(name string) string {
 	return g.action.Getenv(name)
 }
 
-func (g *GithubActionInterface) Debugf(format string, args ...interface{}) {
+func (g *GithubActionInterface) Debugf(format string, args ...any) {
 	g.action.Debugf(format, args...)
 }
 
-func (g *GithubActionInterface) Fatalf(format string, args ...interface{}) {
+func (g *GithubActionInterface) Fatalf(format string, args ...any) {
 	g.action.Fatalf(format, args...)
 }
 
-func (g *GithubActionInterface) Infof(format string, args ...interface{}) {
+func (g *GithubActionInterface) Infof(format string, args ...any) {
 	g.action.Infof(format, args...)
 }
 
@@ -66,15 +66,15 @@ func (m *MockActionInterface) Getenv(name string) string {
 	return m.Env[name]
 }
 
-func (m *MockActionInterface) Debugf(format string, args ...interface{}) {
+func (m *MockActionInterface) Debugf(format string, args ...any) {
 	m.Called(format, args)
 }
 
-func (m *MockActionInterface) Fatalf(format string, args ...interface{}) {
+func (m *MockActionInterface) Fatalf(format string, args ...any) {
 	m.Called(format, args)
 }
 
-func (m *MockActionInterface) Infof(format string, args ...interface{}) {
+func (m *MockActionInterface) Infof(format string, args ...any) {
 	m.Called(format, args)
 }
 
