@@ -29,7 +29,7 @@ runs:
   steps:
     - name: Download ArgoCD Apps Action Binary
       env:
-        ACTION_VERSION: "v1.5.0"
+        ACTION_VERSION: "v1.5.1"
       shell: bash
       run: |
         wget https://github.com/ironashram/argocd-apps-action/releases/download/${ACTION_VERSION}/argocd-apps-action-${ACTION_VERSION}-linux-amd64.tar.gz
