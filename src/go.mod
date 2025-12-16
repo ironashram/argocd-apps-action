@@ -7,7 +7,7 @@ require (
 	github.com/go-git/go-git/v6 v6.0.0-20251103200709-47b1ed2930c9
 	github.com/google/go-github/v77 v77.0.0
 	github.com/jarcoal/httpmock v1.4.1
-	github.com/sethvargo/go-githubactions v1.3.1
+	github.com/sethvargo/go-githubactions v1.3.2
 	github.com/stretchr/testify v1.11.1
 	golang.org/x/oauth2 v0.34.0
 	oras.land/oras-go/v2 v2.6.0
