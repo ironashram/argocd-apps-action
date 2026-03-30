@@ -25,7 +25,7 @@ jobs:
 
       - name: Create Release
         run: |
-          gh release create -t "${{ github.ref_name }}" "${{ github.ref_name }}" --generate-notes
+          gh release create -t "${{ github.ref_name }}" "${{ github.ref_name }}" --generate-notes --draft
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -37,3 +37,16 @@ jobs:
           goarch: ${{ matrix.goarch }}
           pre_command: export CGO_ENABLED=0
           project_path: src/cmd
+          overwrite: "true"
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Publish Release
+        run: |
+          gh release edit "${{ github.ref_name }}" --draft=false --repo "${{ github.repository }}"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
