@@ -12,8 +12,6 @@ permissions:
 jobs:
   update-version:
     runs-on: ubuntu-latest
-    outputs:
-      bumped: ${{ steps.bump.outputs.bumped }}
     steps:
       - name: Check out
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
@@ -33,19 +31,15 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add action.yml README.md
 
-          if git diff --cached --quiet; then
-            echo "bumped=false" >> "$GITHUB_OUTPUT"
-          else
+          if ! git diff --cached --quiet; then
             git commit -m "build: update version to ${VERSION}"
             git push origin master
             git tag -f "${VERSION}" HEAD
             git push origin -f "refs/tags/${VERSION}"
-            echo "bumped=true" >> "$GITHUB_OUTPUT"
           fi
 
   create-release:
     needs: update-version
-    if: needs.update-version.outputs.bumped == 'false'
     runs-on: ubuntu-latest
     outputs:
       release_id: ${{ steps.create.outputs.release_id }}
@@ -75,6 +69,8 @@ jobs:
     steps:
       - name: Check out
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: ${{ github.ref_name }}
 
       - name: Set up Go
         uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417 # v6
