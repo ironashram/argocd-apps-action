@@ -18,12 +18,12 @@ jobs:
       - name: Create Draft Release
         id: create
         run: |
-          release_id=$(gh release create \
-            -t "${{ github.ref_name }}" \
-            "${{ github.ref_name }}" \
-            --generate-notes \
-            --draft \
-            --json id \
+          release_id=$(gh api repos/${{ github.repository }}/releases \
+            --method POST \
+            -f tag_name="${{ github.ref_name }}" \
+            -f name="${{ github.ref_name }}" \
+            -F draft=true \
+            -F generate_release_notes=true \
             --jq '.id')
           echo "release_id=$release_id" >> "$GITHUB_OUTPUT"
         env:
