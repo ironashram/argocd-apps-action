@@ -45,13 +45,24 @@ jobs:
         uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417 # v6
         with:
           go-version-file: src/go.mod
+          cache: false
+
+      - name: Restore cache
+        uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
 
       - name: Build
+        working-directory: ${{ github.workspace }}/src
         run: |
           BINARY="argocd-apps-action"
           ASSET="${BINARY}-${{ github.ref_name }}-${{ matrix.goos }}-${{ matrix.goarch }}"
           CGO_ENABLED=0 GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} \
-            go build -o "$BINARY" ./src/cmd
+            go build -o "${{ github.workspace }}/$BINARY" ./cmd
+          cd ${{ github.workspace }}
           tar czf "${ASSET}.tar.gz" "$BINARY"
           md5sum "${ASSET}.tar.gz" | cut -d ' ' -f1 > "${ASSET}.tar.gz.md5"
 
