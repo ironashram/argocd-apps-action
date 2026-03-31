@@ -10,7 +10,31 @@ permissions:
   packages: write
 
 jobs:
+  update-version:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: master
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update version in action.yml and README.md
+        run: |
+          VERSION="${{ github.ref_name }}"
+          sed -i "s/ACTION_VERSION: \"v[0-9]*\.[0-9]*\.[0-9]*\"/ACTION_VERSION: \"${VERSION}\"/" action.yml
+          sed -i "s|ironashram/argocd-apps-action@v[0-9]*\.[0-9]*\.[0-9]*|ironashram/argocd-apps-action@${VERSION}|g" README.md
+
+      - name: Commit and push version bump
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add action.yml README.md
+          git diff --cached --quiet || git commit -m "build: update version to ${{ github.ref_name }}"
+          git push origin master
+
   create-release:
+    needs: update-version
     runs-on: ubuntu-latest
     outputs:
       release_id: ${{ steps.create.outputs.release_id }}
