@@ -12,29 +12,40 @@ permissions:
 jobs:
   update-version:
     runs-on: ubuntu-latest
+    outputs:
+      bumped: ${{ steps.bump.outputs.bumped }}
     steps:
       - name: Check out
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           ref: master
           token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
 
-      - name: Update version in action.yml and README.md
+      - name: Bump version and retag if needed
+        id: bump
         run: |
           VERSION="${{ github.ref_name }}"
           sed -i "s/ACTION_VERSION: \"v[0-9]*\.[0-9]*\.[0-9]*\"/ACTION_VERSION: \"${VERSION}\"/" action.yml
           sed -i "s|ironashram/argocd-apps-action@v[0-9]*\.[0-9]*\.[0-9]*|ironashram/argocd-apps-action@${VERSION}|g" README.md
 
-      - name: Commit and push version bump
-        run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add action.yml README.md
-          git diff --cached --quiet || git commit -m "build: update version to ${{ github.ref_name }}"
-          git push origin master
+
+          if git diff --cached --quiet; then
+            echo "bumped=false" >> "$GITHUB_OUTPUT"
+          else
+            git commit -m "build: update version to ${VERSION}"
+            git push origin master
+            git tag -f "${VERSION}" HEAD
+            git push origin -f "refs/tags/${VERSION}"
+            echo "bumped=true" >> "$GITHUB_OUTPUT"
+          fi
 
   create-release:
     needs: update-version
+    if: needs.update-version.outputs.bumped == 'false'
     runs-on: ubuntu-latest
     outputs:
       release_id: ${{ steps.create.outputs.release_id }}
