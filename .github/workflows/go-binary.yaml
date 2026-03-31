@@ -3,15 +3,34 @@ name: "go: build binaries"
 on:
   push:
     tags:
-      - 'v*'
+      - "v*"
 
 permissions:
   contents: write
   packages: write
 
 jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    outputs:
+      release_id: ${{ steps.create.outputs.release_id }}
+    steps:
+      - name: Create Draft Release
+        id: create
+        run: |
+          release_id=$(gh release create \
+            -t "${{ github.ref_name }}" \
+            "${{ github.ref_name }}" \
+            --generate-notes \
+            --draft \
+            --json id \
+            --jq '.id')
+          echo "release_id=$release_id" >> "$GITHUB_OUTPUT"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   build:
+    needs: create-release
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -19,25 +38,29 @@ jobs:
         goarch: [amd64]
 
     steps:
-
       - name: Check out
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
-      - name: Create Release
-        run: |
-          gh release create -t "${{ github.ref_name }}" "${{ github.ref_name }}" --generate-notes --draft
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Go Release Binaries
-        uses: wangyoucao577/go-release-action@279495102627de7960cbc33434ab01a12bae144b # v1.55
+      - name: Set up Go
+        uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417 # v6
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          goos: ${{ matrix.goos }}
-          goarch: ${{ matrix.goarch }}
-          pre_command: export CGO_ENABLED=0
-          project_path: src/cmd
-          overwrite: "true"
+          go-version-file: src/go.mod
+
+      - name: Build
+        run: |
+          BINARY="argocd-apps-action"
+          ASSET="${BINARY}-${{ github.ref_name }}-${{ matrix.goos }}-${{ matrix.goarch }}"
+          CGO_ENABLED=0 GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} \
+            go build -o "$BINARY" ./src/cmd
+          tar czf "${ASSET}.tar.gz" "$BINARY"
+          md5sum "${ASSET}.tar.gz" | cut -d ' ' -f1 > "${ASSET}.tar.gz.md5"
+
+      - name: Upload Assets
+        run: |
+          ASSET="argocd-apps-action-${{ github.ref_name }}-${{ matrix.goos }}-${{ matrix.goarch }}"
+          gh release upload "${{ github.ref_name }}" "${ASSET}.tar.gz" "${ASSET}.tar.gz.md5"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   publish:
     needs: build
