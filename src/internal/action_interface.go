@@ -2,7 +2,6 @@ package internal
 
 import (
 	"github.com/sethvargo/go-githubactions"
-	"github.com/stretchr/testify/mock"
 )
 
 type ActionInterface interface {
@@ -43,30 +42,4 @@ func (g *GithubActionInterface) Fatalf(format string, args ...any) {
 
 func (g *GithubActionInterface) Infof(format string, args ...any) {
 	g.action.Infof(format, args...)
-}
-
-type MockActionInterface struct {
-	Inputs map[string]string
-	Env    map[string]string
-	mock.Mock
-}
-
-func (m *MockActionInterface) GetInput(name string) string {
-	return m.Inputs[name]
-}
-
-func (m *MockActionInterface) Getenv(name string) string {
-	return m.Env[name]
-}
-
-func (m *MockActionInterface) Debugf(format string, args ...any) {
-	m.Called(format, args)
-}
-
-func (m *MockActionInterface) Fatalf(format string, args ...any) {
-	m.Called(format, args)
-}
-
-func (m *MockActionInterface) Infof(format string, args ...any) {
-	m.Called(format, args)
 }

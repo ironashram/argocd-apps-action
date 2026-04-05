@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"sigs.k8s.io/yaml"
 
-	"github.com/ironashram/argocd-apps-action/internal"
+	"github.com/ironashram/argocd-apps-action/internal/mocks"
 	"github.com/ironashram/argocd-apps-action/models"
 
 	"github.com/Masterminds/semver/v3"
@@ -18,12 +18,12 @@ import (
 )
 
 func TestProcessFile(t *testing.T) {
-	mockAction := &internal.MockActionInterface{
+	mockAction := &mocks.MockActionInterface{
 		Inputs: map[string]string{},
 	}
-	mockRepo := &internal.MockGitRepo{}
-	mockGitHubClient := &internal.MockGithubClient{}
-	mockOSInterface := &internal.MockOS{}
+	mockRepo := &mocks.MockGitRepo{}
+	mockGitHubClient := &mocks.MockGithubClient{}
+	mockOSInterface := &mocks.MockOS{}
 
 	cfg := &models.Config{
 		CreatePr:     false,
@@ -112,8 +112,8 @@ spec:
 }
 
 func TestUpdateTargetRevision(t *testing.T) {
-	mockAction := &internal.MockActionInterface{}
-	mockOSInterface := &internal.MockOS{}
+	mockAction := &mocks.MockActionInterface{}
+	mockOSInterface := &mocks.MockOS{}
 
 	fileContent := `spec:
   source:

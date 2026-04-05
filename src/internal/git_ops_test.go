@@ -1,4 +1,4 @@
-package internal
+package internal_test
 
 import (
 	"testing"
@@ -6,10 +6,11 @@ import (
 	"github.com/go-git/go-git/v6"
 	"github.com/go-git/go-git/v6/plumbing"
 	"github.com/go-git/go-git/v6/storage/memory"
+	"github.com/ironashram/argocd-apps-action/internal/mocks"
 )
 
 func TestGitRepo_Push(t *testing.T) {
-	mockRepo := &MockGitRepo{}
+	mockRepo := &mocks.MockGitRepo{}
 	options := &git.PushOptions{}
 	mockRepo.On("Push", options).Return(nil)
 
@@ -22,7 +23,7 @@ func TestGitRepo_Push(t *testing.T) {
 }
 
 func TestGitRepo_SetReference(t *testing.T) {
-	mockRepo := &MockGitRepo{}
+	mockRepo := &mocks.MockGitRepo{}
 	name := "ref"
 	ref := &plumbing.Reference{}
 	mockRepo.On("SetReference", name, ref).Return(nil)
@@ -36,8 +37,8 @@ func TestGitRepo_SetReference(t *testing.T) {
 }
 
 func TestGitRepo_Worktree(t *testing.T) {
-	mockRepo := new(MockGitRepo)
-	mockWorktree := new(MockWorktree)
+	mockRepo := new(mocks.MockGitRepo)
+	mockWorktree := new(mocks.MockWorktree)
 	mockRepo.On("Worktree").Return(mockWorktree, nil)
 
 	_, err := mockRepo.Worktree()
@@ -50,7 +51,7 @@ func TestGitRepo_Worktree(t *testing.T) {
 }
 
 func TestGitRepo_Head(t *testing.T) {
-	mockRepo := &MockGitRepo{}
+	mockRepo := &mocks.MockGitRepo{}
 	ref := plumbing.NewHashReference(plumbing.ReferenceName("HEAD"), plumbing.NewHash("aefdd0f"))
 	mockRepo.On("Head").Return(ref, nil)
 
@@ -63,7 +64,7 @@ func TestGitRepo_Head(t *testing.T) {
 }
 
 func TestGitRepo_Storer(t *testing.T) {
-	mockRepo := &MockGitRepo{}
+	mockRepo := &mocks.MockGitRepo{}
 	mockRepo.On("Storer").Return(memory.NewStorage())
 
 	storer := mockRepo.Storer()
@@ -75,8 +76,8 @@ func TestGitRepo_Storer(t *testing.T) {
 }
 
 func TestGitRepo_IterReferences(t *testing.T) {
-	mockRepo := &MockGitRepo{}
-	iter := &MockReferenceIter{}
+	mockRepo := &mocks.MockGitRepo{}
+	iter := &mocks.MockReferenceIter{}
 	mockRepo.On("IterReferences").Return(iter, nil)
 
 	_, err := mockRepo.IterReferences()
@@ -86,4 +87,3 @@ func TestGitRepo_IterReferences(t *testing.T) {
 
 	mockRepo.AssertExpectations(t)
 }
-
