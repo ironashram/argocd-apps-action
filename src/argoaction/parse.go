@@ -125,9 +125,9 @@ func getNewestVersionFromOCI(url string, chart string, targetRevision string, ac
 	tags := &models.TagsList{}
 
 	url = strings.TrimSuffix(url, "/")
-	url = strings.Replace(url, "https://", "", 1)
-	url = strings.Replace(url, "http://", "", 1)
-	url = strings.Replace(url, "oci://", "", 1)
+	url = strings.TrimPrefix(url, "https://")
+	url = strings.TrimPrefix(url, "http://")
+	url = strings.TrimPrefix(url, "oci://")
 	url = url + "/" + chart
 	repo, err := remote.NewRepository(url)
 	if err != nil {
