@@ -14,6 +14,13 @@ import (
 	"golang.org/x/oauth2"
 )
 
+type Updater struct {
+	GitOps       internal.GitOperations
+	GitHubClient internal.GitHubClient
+	Config       *models.Config
+	Action       internal.ActionInterface
+}
+
 func StartUpdate(ctx context.Context, cfg *models.Config, action internal.ActionInterface) error {
 	repo, err := git.PlainOpen(cfg.Workspace)
 	if err != nil {
@@ -31,7 +38,14 @@ func StartUpdate(ctx context.Context, cfg *models.Config, action internal.Action
 	githubClient := github.NewClient(tc)
 	realClient := &internal.RealGitHubClient{Client: githubClient}
 
-	err = checkForUpdates(gitOps, realClient, cfg, action)
+	u := &Updater{
+		GitOps:       gitOps,
+		GitHubClient: realClient,
+		Config:       cfg,
+		Action:       action,
+	}
+
+	err = u.CheckForUpdates()
 	if err != nil {
 		return fmt.Errorf("checking for updates: %w", err)
 	}

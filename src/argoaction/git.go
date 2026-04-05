@@ -11,7 +11,6 @@ import (
 	"github.com/Masterminds/semver/v3"
 	githttp "github.com/go-git/go-git/v6/plumbing/transport/http"
 	"github.com/ironashram/argocd-apps-action/internal"
-	"github.com/ironashram/argocd-apps-action/models"
 
 	"github.com/go-git/go-git/v6"
 	"github.com/go-git/go-git/v6/config"
@@ -20,8 +19,8 @@ import (
 	"github.com/google/go-github/v77/github"
 )
 
-var createNewBranch = func(gitOps internal.GitOperations, baseBranch, branchName string) error {
-	worktree, err := gitOps.Worktree()
+func (u *Updater) createNewBranch(baseBranch, branchName string) error {
+	worktree, err := u.GitOps.Worktree()
 	if err != nil {
 		return err
 	}
@@ -33,19 +32,19 @@ var createNewBranch = func(gitOps internal.GitOperations, baseBranch, branchName
 		return err
 	}
 
-	headRef, err := gitOps.Head()
+	headRef, err := u.GitOps.Head()
 	if err != nil {
 		return err
 	}
 
 	newBranchRefName := plumbing.NewBranchReferenceName(branchName)
 	newReference := plumbing.NewHashReference(newBranchRefName, headRef.Hash())
-	err = gitOps.SetReference(newBranchRefName.String(), newReference)
+	err = u.GitOps.SetReference(newBranchRefName.String(), newReference)
 	if err != nil {
 		return fmt.Errorf("failed to create new branch: %w", err)
 	}
 
-	worktree, err = gitOps.Worktree()
+	worktree, err = u.GitOps.Worktree()
 	if err != nil {
 		return err
 	}
@@ -60,8 +59,8 @@ var createNewBranch = func(gitOps internal.GitOperations, baseBranch, branchName
 	return nil
 }
 
-var commitChanges = func(gitOps internal.GitOperations, path string, commitMessage string) error {
-	worktree, err := gitOps.Worktree()
+func (u *Updater) commitChanges(path string, commitMessage string) error {
+	worktree, err := u.GitOps.Worktree()
 	if err != nil {
 		return fmt.Errorf("failed to commit changes: %w", err)
 	}
@@ -94,11 +93,11 @@ var commitChanges = func(gitOps internal.GitOperations, path string, commitMessa
 	return nil
 }
 
-var pushChanges = func(gitOps internal.GitOperations, branchName string, cfg *models.Config) error {
-	err := gitOps.Push(&git.PushOptions{
+func (u *Updater) pushChanges(branchName string) error {
+	err := u.GitOps.Push(&git.PushOptions{
 		Auth: &githttp.BasicAuth{
 			Username: "github-actions[bot]",
-			Password: cfg.Token,
+			Password: u.Config.Token,
 		},
 		RefSpecs: []config.RefSpec{config.RefSpec("refs/heads/" + branchName + ":refs/heads/" + branchName)},
 	})
@@ -111,8 +110,7 @@ var pushChanges = func(gitOps internal.GitOperations, branchName string, cfg *mo
 	return nil
 }
 
-var createPullRequest = func(githubClient internal.GitHubClient, baseBranch string, newBranch string, title string, body string, action internal.ActionInterface, cfg *models.Config) (*github.PullRequest, error) {
-
+func (u *Updater) createPullRequest(baseBranch string, newBranch string, title string, body string) (*github.PullRequest, error) {
 	newPR := &github.NewPullRequest{
 		Title:               github.Ptr(title),
 		Head:                github.Ptr(newBranch),
@@ -121,20 +119,16 @@ var createPullRequest = func(githubClient internal.GitHubClient, baseBranch stri
 		MaintainerCanModify: github.Ptr(true),
 	}
 
-	if githubClient == nil {
+	if u.GitHubClient == nil {
 		return nil, errors.New("githubClient is nil")
 	}
 
-	pullRequests := githubClient.PullRequests()
+	pullRequests := u.GitHubClient.PullRequests()
 	if pullRequests == nil {
 		return nil, errors.New("PullRequests is nil")
 	}
 
-	if action == nil {
-		return nil, errors.New("action is nil")
-	}
-
-	pr, _, err := pullRequests.Create(context.Background(), cfg.Owner, cfg.Name, newPR)
+	pr, _, err := pullRequests.Create(context.Background(), u.Config.Owner, u.Config.Name, newPR)
 	if err != nil {
 		return pr, err
 	}
@@ -142,17 +136,17 @@ var createPullRequest = func(githubClient internal.GitHubClient, baseBranch stri
 	return pr, nil
 }
 
-var addLabelsToPullRequest = func(githubClient internal.GitHubClient, pr *github.PullRequest, labels []string, cfg *models.Config) error {
-	if githubClient == nil {
+func (u *Updater) addLabelsToPullRequest(pr *github.PullRequest, labels []string) error {
+	if u.GitHubClient == nil {
 		return errors.New("githubClient is nil")
 	}
 
-	issues := githubClient.Issues()
+	issues := u.GitHubClient.Issues()
 	if issues == nil {
 		return errors.New("issues is nil")
 	}
 
-	_, _, err := issues.AddLabelsToIssue(context.Background(), cfg.Owner, cfg.Name, *pr.Number, labels)
+	_, _, err := issues.AddLabelsToIssue(context.Background(), u.Config.Owner, u.Config.Name, *pr.Number, labels)
 	if err != nil {
 		return err
 	}
@@ -160,34 +154,34 @@ var addLabelsToPullRequest = func(githubClient internal.GitHubClient, pr *github
 	return nil
 }
 
-var handleNewVersion = func(chart string, newest *semver.Version, path string, gitOps internal.GitOperations, cfg *models.Config, action internal.ActionInterface, osw internal.OSInterface, githubClient internal.GitHubClient) error {
+func (u *Updater) handleNewVersion(chart string, newest *semver.Version, path string, osw internal.OSInterface) error {
 	filename := filepath.Base(path)
 	filename = strings.TrimSuffix(filename, filepath.Ext(filename))
 	branchName := "update-" + chart + "-" + filename + "-" + newest.String()
-	err := createNewBranch(gitOps, cfg.TargetBranch, branchName)
+	err := u.createNewBranch(u.Config.TargetBranch, branchName)
 	if err != nil {
 		return fmt.Errorf("creating new branch: %w", err)
 	}
 
-	err = updateTargetRevision(newest, path, action, osw)
+	err = updateTargetRevision(newest, path, u.Action, osw)
 	if err != nil {
 		return fmt.Errorf("updating target revision: %w", err)
 	}
 
 	commitMessage := "chore: bump " + chart + " to version " + newest.String()
-	err = commitChanges(gitOps, path, commitMessage)
+	err = u.commitChanges(path, commitMessage)
 	if err != nil {
 		if strings.Contains(err.Error(), "cannot create empty commit: clean working tree") {
-			action.Infof("No changes to commit for %s, branch already up to date", chart)
+			u.Action.Infof("No changes to commit for %s, branch already up to date", chart)
 			return nil
 		}
 		return fmt.Errorf("committing changes: %w", err)
 	}
 
-	err = pushChanges(gitOps, branchName, cfg)
+	err = u.pushChanges(branchName)
 	if err != nil {
 		if strings.Contains(err.Error(), "branch already exists") {
-			action.Infof("Branch %s already exists, skipping", branchName)
+			u.Action.Infof("Branch %s already exists, skipping", branchName)
 			return nil
 		}
 		return fmt.Errorf("pushing changes: %w", err)
@@ -195,17 +189,17 @@ var handleNewVersion = func(chart string, newest *semver.Version, path string, g
 
 	prTitle := "chore: bump " + chart + " to version " + newest.String()
 	prBody := "This PR updates " + chart + " to version " + newest.String()
-	pr, err := createPullRequest(githubClient, cfg.TargetBranch, branchName, prTitle, prBody, action, cfg)
+	pr, err := u.createPullRequest(u.Config.TargetBranch, branchName, prTitle, prBody)
 	if err != nil {
 		return fmt.Errorf("creating pull request: %w", err)
 	}
 
-	labels := cfg.Labels
-	err = addLabelsToPullRequest(githubClient, pr, labels, cfg)
+	labels := u.Config.Labels
+	err = u.addLabelsToPullRequest(pr, labels)
 	if err != nil {
 		return fmt.Errorf("adding labels to pull request: %w", err)
 	}
 
-	action.Infof("Pull request created for %s", chart)
+	u.Action.Infof("Pull request created for %s", chart)
 	return nil
 }

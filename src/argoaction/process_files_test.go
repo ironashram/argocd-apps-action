@@ -21,13 +21,18 @@ func TestProcessFile(t *testing.T) {
 	mockAction := &mocks.MockActionInterface{
 		Inputs: map[string]string{},
 	}
-	mockRepo := &mocks.MockGitRepo{}
-	mockGitHubClient := &mocks.MockGithubClient{}
 	mockOSInterface := &mocks.MockOS{}
 
 	cfg := &models.Config{
 		CreatePr:     false,
 		TargetBranch: "main",
+	}
+
+	u := &Updater{
+		GitOps:       &mocks.MockGitRepo{},
+		GitHubClient: &mocks.MockGithubClient{},
+		Config:       cfg,
+		Action:       mockAction,
 	}
 
 	httpmock.Activate()
@@ -64,7 +69,7 @@ spec:
 
 		mockOSInterface.On("ReadFile", mock.Anything).Return([]byte(fileContent), nil).Once()
 
-		err := processFile("invalid1.yaml", mockRepo, mockGitHubClient, cfg, mockAction, mockOSInterface)
+		err := u.processFile("invalid1.yaml", mockOSInterface)
 
 		assert.NoError(t, err)
 		mockAction.AssertExpectations(t)
@@ -82,7 +87,7 @@ spec:
 `)
 		mockOSInterface.On("ReadFile", mock.Anything).Return([]byte(fileContent), nil).Once()
 
-		err := processFile("invalid2.yaml", mockRepo, mockGitHubClient, cfg, mockAction, mockOSInterface)
+		err := u.processFile("invalid2.yaml", mockOSInterface)
 
 		assert.NoError(t, err)
 		mockAction.AssertExpectations(t)
@@ -102,12 +107,11 @@ spec:
 `)
 		mockOSInterface.On("ReadFile", mock.Anything).Return([]byte(fileContent), nil).Once()
 
-		err := processFile("valid.yaml", mockRepo, mockGitHubClient, cfg, mockAction, mockOSInterface)
+		err := u.processFile("valid.yaml", mockOSInterface)
 
 		assert.NoError(t, err)
 		mockAction.AssertExpectations(t)
 		mockOSInterface.AssertExpectations(t)
-		mockGitHubClient.AssertExpectations(t)
 	})
 }
 

@@ -11,7 +11,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
-	"github.com/ironashram/argocd-apps-action/internal"
 	"github.com/ironashram/argocd-apps-action/internal/mocks"
 	"github.com/ironashram/argocd-apps-action/models"
 )
@@ -28,8 +27,6 @@ func TestCreatePullRequest(t *testing.T) {
 		Inputs: map[string]string{},
 	}
 
-	var mockClient internal.GitHubClient
-
 	baseBranch := "main"
 	newBranch := "feature-branch"
 	title := "Test Pull Request"
@@ -43,7 +40,7 @@ func TestCreatePullRequest(t *testing.T) {
 		MaintainerCanModify: github.Bool(true),
 	}
 
-	mockClient = &mocks.MockGithubClient{
+	mockClient := &mocks.MockGithubClient{
 		PullRequestsService: &mocks.MockPullRequestsService{
 			CreateFunc: func(ctx context.Context, owner string, name string, newPR *github.NewPullRequest) (*github.PullRequest, *github.Response, error) {
 				assert.Equal(t, cfg.Owner, owner)
@@ -54,12 +51,17 @@ func TestCreatePullRequest(t *testing.T) {
 		},
 	}
 
-	_, err := createPullRequest(mockClient, baseBranch, newBranch, title, body, mockAction, cfg)
+	u := &Updater{
+		GitHubClient: mockClient,
+		Config:       cfg,
+		Action:       mockAction,
+	}
 
+	_, err := u.createPullRequest(baseBranch, newBranch, title, body)
 	assert.NoError(t, err)
 
 	expectedError := errors.New("failed to create pull request")
-	mockClient = &mocks.MockGithubClient{
+	u.GitHubClient = &mocks.MockGithubClient{
 		PullRequestsService: &mocks.MockPullRequestsService{
 			CreateFunc: func(ctx context.Context, owner string, repo string, newPR *github.NewPullRequest) (*github.PullRequest, *github.Response, error) {
 				return nil, nil, expectedError
@@ -67,8 +69,7 @@ func TestCreatePullRequest(t *testing.T) {
 		},
 	}
 
-	_, err = createPullRequest(mockClient, baseBranch, newBranch, title, body, mockAction, cfg)
-
+	_, err = u.createPullRequest(baseBranch, newBranch, title, body)
 	assert.EqualError(t, err, expectedError.Error())
 }
 
@@ -84,8 +85,6 @@ func TestCreatePullRequest_Error(t *testing.T) {
 		Inputs: map[string]string{},
 	}
 
-	var mockClient internal.GitHubClient
-
 	baseBranch := "main"
 	newBranch := "feature-branch"
 	title := "Test Pull Request"
@@ -100,7 +99,7 @@ func TestCreatePullRequest_Error(t *testing.T) {
 	}
 
 	expectedError := errors.New("failed to create pull request")
-	mockClient = &mocks.MockGithubClient{
+	mockClient := &mocks.MockGithubClient{
 		PullRequestsService: &mocks.MockPullRequestsService{
 			CreateFunc: func(ctx context.Context, owner string, name string, newPR *github.NewPullRequest) (*github.PullRequest, *github.Response, error) {
 				assert.Equal(t, cfg.Owner, owner)
@@ -111,8 +110,13 @@ func TestCreatePullRequest_Error(t *testing.T) {
 		},
 	}
 
-	_, err := createPullRequest(mockClient, baseBranch, newBranch, title, body, mockAction, cfg)
+	u := &Updater{
+		GitHubClient: mockClient,
+		Config:       cfg,
+		Action:       mockAction,
+	}
 
+	_, err := u.createPullRequest(baseBranch, newBranch, title, body)
 	assert.EqualError(t, err, expectedError.Error())
 }
 
@@ -127,7 +131,9 @@ func TestCreateNewBranch(t *testing.T) {
 
 	worktree.On("Checkout", mock.Anything).Return(nil)
 
-	err := createNewBranch(gitOps, "base", "new-branch")
+	u := &Updater{GitOps: gitOps}
+
+	err := u.createNewBranch("base", "new-branch")
 
 	gitOps.AssertExpectations(t)
 	worktree.AssertExpectations(t)
@@ -145,7 +151,9 @@ func TestCommitChanges(t *testing.T) {
 	worktree.On("Commit", "Test commit", mock.Anything).Return(commitHash, nil)
 	worktree.On("Root").Return("/valid/path", nil)
 
-	err := commitChanges(mockRepo, "/valid/path", "Test commit")
+	u := &Updater{GitOps: mockRepo}
+
+	err := u.commitChanges("/valid/path", "Test commit")
 
 	assert.NoError(t, err)
 	mockRepo.AssertExpectations(t)
@@ -155,7 +163,13 @@ func TestCommitChanges(t *testing.T) {
 func TestPushChanges(t *testing.T) {
 	mockRepo := &mocks.MockGitRepo{}
 	mockRepo.On("Push", mock.Anything).Return(nil)
-	err := pushChanges(mockRepo, "test-branch", &models.Config{Token: "test-token"})
+
+	u := &Updater{
+		GitOps: mockRepo,
+		Config: &models.Config{Token: "test-token"},
+	}
+
+	err := u.pushChanges("test-branch")
 	assert.NoError(t, err)
 	mockRepo.AssertExpectations(t)
 }
@@ -166,10 +180,11 @@ func TestCreateNewBranch_Error(t *testing.T) {
 	worktree := new(mocks.MockWorktree)
 
 	mockRepo.On("Worktree").Return(worktree, nil)
-
 	worktree.On("Checkout", mock.Anything).Return(expectedError)
 
-	err := createNewBranch(mockRepo, "main", "test-branch")
+	u := &Updater{GitOps: mockRepo}
+
+	err := u.createNewBranch("main", "test-branch")
 
 	assert.EqualError(t, err, expectedError.Error())
 	mockRepo.AssertExpectations(t)
@@ -181,7 +196,10 @@ func TestCommitChanges_Error(t *testing.T) {
 	mockRepo := new(mocks.MockGitRepo)
 	mockWorktree := new(mocks.MockWorktree)
 	mockRepo.On("Worktree").Return(mockWorktree, expectedError)
-	err := commitChanges(mockRepo, ".", "Test commit")
+
+	u := &Updater{GitOps: mockRepo}
+
+	err := u.commitChanges(".", "Test commit")
 	assert.EqualError(t, err, fmt.Errorf("failed to commit changes: %w", expectedError).Error())
 	mockRepo.AssertExpectations(t)
 	mockWorktree.AssertExpectations(t)
@@ -191,7 +209,13 @@ func TestPushChanges_Error(t *testing.T) {
 	expectedError := fmt.Errorf("failed to push changes: %w", errors.New("some error"))
 	mockRepo := &mocks.MockGitRepo{}
 	mockRepo.On("Push", mock.Anything).Return(expectedError)
-	err := pushChanges(mockRepo, "test-branch", &models.Config{Token: "test-token"})
+
+	u := &Updater{
+		GitOps: mockRepo,
+		Config: &models.Config{Token: "test-token"},
+	}
+
+	err := u.pushChanges("test-branch")
 	assert.EqualError(t, err, fmt.Errorf("failed to push changes: %w", expectedError).Error())
 	mockRepo.AssertExpectations(t)
 }

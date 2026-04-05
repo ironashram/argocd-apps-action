@@ -9,27 +9,26 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/ironashram/argocd-apps-action/internal"
-	"github.com/ironashram/argocd-apps-action/models"
 )
 
 var targetRevisionRe = regexp.MustCompile(`(.*targetRevision: ).*`)
 
-var checkForUpdates = func(gitOps internal.GitOperations, githubClient internal.GitHubClient, cfg *models.Config, action internal.ActionInterface) error {
-	dir := path.Join(cfg.Workspace, cfg.AppsFolder)
+func (u *Updater) CheckForUpdates() error {
+	dir := path.Join(u.Config.Workspace, u.Config.AppsFolder)
 
 	var walkErr error
 	filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
-			action.Debugf("Error walking path: %v", err)
+			u.Action.Debugf("Error walking path: %v", err)
 			walkErr = err
 			return nil
 		}
 
 		if filepath.Ext(path) == ".yaml" {
 			osw := &internal.OSWrapper{}
-			err := processFile(path, gitOps, githubClient, cfg, action, osw)
+			err := u.processFile(path, osw)
 			if err != nil {
-				action.Debugf("Error processing file: %v", err)
+				u.Action.Debugf("Error processing file: %v", err)
 				walkErr = err
 			}
 		}
@@ -67,10 +66,10 @@ func updateTargetRevision(newest *semver.Version, path string, action internal.A
 	return nil
 }
 
-var processFile = func(path string, gitOps internal.GitOperations, githubClient internal.GitHubClient, cfg *models.Config, action internal.ActionInterface, osw internal.OSInterface) error {
+func (u *Updater) processFile(path string, osw internal.OSInterface) error {
 	app, err := readAndParseYAML(osw, path)
 	if err != nil {
-		action.Debugf("Error reading and parsing YAML: %v", err)
+		u.Action.Debugf("Error reading and parsing YAML: %v", err)
 		return err
 	}
 
@@ -79,37 +78,37 @@ var processFile = func(path string, gitOps internal.GitOperations, githubClient 
 	targetRevision := app.Spec.Source.TargetRevision
 
 	if chart == "" || url == "" || targetRevision == "" {
-		action.Debugf("Skipping invalid application manifest %s", path)
+		u.Action.Debugf("Skipping invalid application manifest %s", path)
 		return nil
 	}
 
-	action.Debugf("Checking %s from %s, current version is %s", chart, url, targetRevision)
+	u.Action.Debugf("Checking %s from %s, current version is %s", chart, url, targetRevision)
 
-	newest, err := getNewestVersionFromNative(url+"/index.yaml", chart, targetRevision, action, cfg.SkipPreRelease)
+	newest, err := getNewestVersionFromNative(url+"/index.yaml", chart, targetRevision, u.Action, u.Config.SkipPreRelease)
 	if err != nil {
 		if strings.Contains(err.Error(), "unsupported protocol scheme") {
-			action.Debugf("Does not look like a native chart repository, trying OCI\n")
-			newest, err = getNewestVersionFromOCI(url, chart, targetRevision, action, cfg.SkipPreRelease)
+			u.Action.Debugf("Does not look like a native chart repository, trying OCI\n")
+			newest, err = getNewestVersionFromOCI(url, chart, targetRevision, u.Action, u.Config.SkipPreRelease)
 			if err != nil {
-				action.Infof("Error getting newest version: %v", err)
+				u.Action.Infof("Error getting newest version: %v", err)
 				return nil
 			}
 		}
 	}
 
 	if newest != nil {
-		action.Infof("There is a newer %s version: %s", chart, newest)
+		u.Action.Infof("There is a newer %s version: %s", chart, newest)
 
-		if cfg.CreatePr {
-			err = handleNewVersion(chart, newest, path, gitOps, cfg, action, osw, githubClient)
+		if u.Config.CreatePr {
+			err = u.handleNewVersion(chart, newest, path, osw)
 			if err != nil {
 				return err
 			}
 		} else {
-			action.Infof("Create PR is disabled, skipping PR creation for %s", chart)
+			u.Action.Infof("Create PR is disabled, skipping PR creation for %s", chart)
 		}
 	} else {
-		action.Debugf("No newer version of %s is available", chart)
+		u.Action.Debugf("No newer version of %s is available", chart)
 	}
 	return nil
 }
