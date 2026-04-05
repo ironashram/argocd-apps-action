@@ -2,6 +2,7 @@ package argoaction
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 
 	"github.com/go-git/go-git/v6"
@@ -14,12 +15,9 @@ import (
 )
 
 func StartUpdate(ctx context.Context, cfg *models.Config, action internal.ActionInterface) error {
-
-	repoPath := cfg.Workspace
-
-	repo, err := git.PlainOpen(repoPath)
+	repo, err := git.PlainOpen(cfg.Workspace)
 	if err != nil {
-		action.Fatalf("error: %v", err)
+		return fmt.Errorf("opening repository: %w", err)
 	}
 
 	gitOps := &internal.GitRepo{Repo: repo}
@@ -35,7 +33,7 @@ func StartUpdate(ctx context.Context, cfg *models.Config, action internal.Action
 
 	err = checkForUpdates(gitOps, realClient, cfg, action)
 	if err != nil {
-		action.Fatalf("error: %v", err)
+		return fmt.Errorf("checking for updates: %w", err)
 	}
 
 	return nil

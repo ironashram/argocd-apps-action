@@ -166,14 +166,12 @@ var handleNewVersion = func(chart string, newest *semver.Version, path string, g
 	branchName := "update-" + chart + "-" + filename + "-" + newest.String()
 	err := createNewBranch(gitOps, cfg.TargetBranch, branchName)
 	if err != nil {
-		action.Fatalf("Error creating new branch: %v", err)
-		return err
+		return fmt.Errorf("creating new branch: %w", err)
 	}
 
 	err = updateTargetRevision(newest, path, action, osw)
 	if err != nil {
-		action.Fatalf("Error updating target revision: %v", err)
-		return err
+		return fmt.Errorf("updating target revision: %w", err)
 	}
 
 	commitMessage := "chore: bump " + chart + " to version " + newest.String()
@@ -183,8 +181,7 @@ var handleNewVersion = func(chart string, newest *semver.Version, path string, g
 			action.Infof("No changes to commit for %s, branch already up to date", chart)
 			return nil
 		}
-		action.Fatalf("Error committing changes: %v", err)
-		return err
+		return fmt.Errorf("committing changes: %w", err)
 	}
 
 	err = pushChanges(gitOps, branchName, cfg)
@@ -193,22 +190,20 @@ var handleNewVersion = func(chart string, newest *semver.Version, path string, g
 			action.Infof("Branch %s already exists, skipping", branchName)
 			return nil
 		}
-		action.Fatalf("Error pushing changes: %v", err)
-		return err
+		return fmt.Errorf("pushing changes: %w", err)
 	}
 
 	prTitle := "chore: bump " + chart + " to version " + newest.String()
 	prBody := "This PR updates " + chart + " to version " + newest.String()
 	pr, err := createPullRequest(githubClient, cfg.TargetBranch, branchName, prTitle, prBody, action, cfg)
 	if err != nil {
-		action.Fatalf("Error creating pull request: %v", err)
-		return err
+		return fmt.Errorf("creating pull request: %w", err)
 	}
 
 	labels := cfg.Labels
 	err = addLabelsToPullRequest(githubClient, pr, labels, cfg)
 	if err != nil {
-		action.Fatalf("Error adding labels to pull request: %v", err)
+		return fmt.Errorf("adding labels to pull request: %w", err)
 	}
 
 	action.Infof("Pull request created for %s", chart)
