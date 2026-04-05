@@ -141,8 +141,12 @@ func getNewestVersionFromOCI(url string, chart string, targetRevision string, ac
 			tags.Tags = append(tags.Tags, convertedTag)
 		}
 
-		return err
+		return nil
 	})
+	if err != nil {
+		action.Debugf("Error getting tags: %v", err)
+		return nil, err
+	}
 
 	newest, err := parseOCINewest(tags, targetRevision, action, skipPreRelease)
 	if err != nil {
@@ -150,11 +154,5 @@ func getNewestVersionFromOCI(url string, chart string, targetRevision string, ac
 		return nil, err
 	}
 
-	if err != nil {
-		action.Debugf("Error getting tags: %v", err)
-		return nil, err
-	}
-
 	return newest, nil
-
 }
