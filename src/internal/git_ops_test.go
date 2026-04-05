@@ -6,7 +6,6 @@ import (
 	"github.com/go-git/go-git/v6"
 	"github.com/go-git/go-git/v6/plumbing"
 	"github.com/go-git/go-git/v6/storage/memory"
-	"github.com/stretchr/testify/mock"
 )
 
 func TestGitRepo_Push(t *testing.T) {
@@ -88,15 +87,3 @@ func TestGitRepo_IterReferences(t *testing.T) {
 	mockRepo.AssertExpectations(t)
 }
 
-func TestGitRepo_PlainOpen(t *testing.T) {
-	mockRepo := &MockGitRepo{}
-	repo, _ := git.Init(memory.NewStorage(), nil)
-	mockRepo.On("PlainOpen", mock.AnythingOfType("string")).Return(repo, nil)
-
-	_, err := mockRepo.PlainOpen("dummyPath")
-	if err != nil {
-		t.Errorf("Unexpected error: %v", err)
-	}
-
-	mockRepo.AssertExpectations(t)
-}

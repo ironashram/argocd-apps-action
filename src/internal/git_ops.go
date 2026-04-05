@@ -18,7 +18,6 @@ type GitOperations interface {
 	Head() (*plumbing.Reference, error)
 	Storer() storage.Storer
 	IterReferences() (storer.ReferenceIter, error)
-	PlainOpen(string) (*git.Repository, error)
 }
 
 type GitRepo struct {
@@ -57,15 +56,6 @@ func (r *GitRepo) IterReferences() (storer.ReferenceIter, error) {
 	return r.Repo.Storer.IterReferences()
 }
 
-func (r *GitRepo) PlainOpen(path string) (*git.Repository, error) {
-	repo, err := git.PlainOpen(path)
-	if err != nil {
-		return nil, err
-	}
-	r.Repo = repo
-	return r.Repo, nil
-}
-
 type MockGitRepo struct {
 	mock.Mock
 }
@@ -98,11 +88,6 @@ func (m *MockGitRepo) Storer() storage.Storer {
 func (m *MockGitRepo) IterReferences() (storer.ReferenceIter, error) {
 	args := m.Called()
 	return args.Get(0).(storer.ReferenceIter), args.Error(1)
-}
-
-func (m *MockGitRepo) PlainOpen(path string) (*git.Repository, error) {
-	args := m.Called(path)
-	return args.Get(0).(*git.Repository), args.Error(1)
 }
 
 type MockReference struct {
