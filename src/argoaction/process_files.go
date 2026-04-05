@@ -12,6 +12,8 @@ import (
 	"github.com/ironashram/argocd-apps-action/models"
 )
 
+var targetRevisionRe = regexp.MustCompile(`(.*targetRevision: ).*`)
+
 var checkForUpdates = func(gitOps internal.GitOperations, githubClient internal.GitHubClient, cfg *models.Config, action internal.ActionInterface) error {
 	dir := path.Join(cfg.Workspace, cfg.AppsFolder)
 
@@ -49,8 +51,7 @@ func updateTargetRevision(newest *semver.Version, path string, action internal.A
 
 	for i, line := range lines {
 		if strings.Contains(line, "targetRevision:") {
-			re := regexp.MustCompile(`(.*targetRevision: ).*`)
-			lines[i] = re.ReplaceAllString(line, "${1}"+newest.String())
+			lines[i] = targetRevisionRe.ReplaceAllString(line, "${1}"+newest.String())
 			break
 		}
 	}
