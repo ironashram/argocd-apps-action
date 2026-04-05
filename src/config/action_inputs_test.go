@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/ironashram/argocd-apps-action/internal"
+	"github.com/ironashram/argocd-apps-action/internal/mocks"
 	"github.com/ironashram/argocd-apps-action/models"
 	"github.com/stretchr/testify/mock"
 )
@@ -13,13 +13,13 @@ func TestNewFromInputs(t *testing.T) {
 	// Test cases
 	testCases := []struct {
 		name        string
-		action      *internal.MockActionInterface
+		action      *mocks.MockActionInterface
 		expected    *models.Config
 		expectedErr error
 	}{
 		{
 			name: "Test Case 1",
-			action: &internal.MockActionInterface{
+			action: &mocks.MockActionInterface{
 				Inputs: map[string]string{
 					"skip_prerelease": "true",
 					"target_branch":   "main",
@@ -49,7 +49,7 @@ func TestNewFromInputs(t *testing.T) {
 		},
 		{
 			name: "Test Case 2",
-			action: &internal.MockActionInterface{
+			action: &mocks.MockActionInterface{
 				Inputs: map[string]string{
 					"skip_prerelease": "false",
 					"target_branch":   "develop",

@@ -1,15 +1,17 @@
-package internal
+package internal_test
 
 import (
 	"errors"
 	"os"
 	"testing"
 
+	"github.com/ironashram/argocd-apps-action/internal"
+	"github.com/ironashram/argocd-apps-action/internal/mocks"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestMockOS_ReadFile(t *testing.T) {
-	mockOS := new(MockOS)
+	mockOS := new(mocks.MockOS)
 
 	path := "/path/to/file"
 	expectedData := []byte("file data")
@@ -39,7 +41,7 @@ func TestOSWrapper_ReadFile(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	data, err := (&OSWrapper{}).ReadFile(tmpfile.Name())
+	data, err := (&internal.OSWrapper{}).ReadFile(tmpfile.Name())
 
 	assert.NoError(t, err)
 	assert.Equal(t, expectedData, data)

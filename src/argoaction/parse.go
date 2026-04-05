@@ -14,7 +14,7 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
-var readAndParseYAML = func(osi internal.OSInterface, path string) (*models.Application, error) {
+func readAndParseYAML(osi internal.OSInterface, path string) (*models.Application, error) {
 	data, err := osi.ReadFile(path)
 	if err != nil {
 		return nil, err
@@ -29,7 +29,7 @@ var readAndParseYAML = func(osi internal.OSInterface, path string) (*models.Appl
 	return &app, nil
 }
 
-var parseNativeNewest = func(targetVersion string, versions []struct {
+func parseNativeNewest(targetVersion string, versions []struct {
 	Version string `yaml:"version"`
 }, skipPreRelease bool) (*semver.Version, error) {
 	target, err := semver.NewVersion(targetVersion)
@@ -92,7 +92,7 @@ func getNewestVersionFromNative(url string, chart string, targetRevision string,
 	return newest, nil
 }
 
-var parseOCINewest = func(tags *models.TagsList, targetVersion string, action internal.ActionInterface, skipPreRelease bool) (*semver.Version, error) {
+func parseOCINewest(tags *models.TagsList, targetVersion string, action internal.ActionInterface, skipPreRelease bool) (*semver.Version, error) {
 	target, err := semver.NewVersion(targetVersion)
 	if err != nil {
 		action.Debugf("Error parsing target version: %v", err)
@@ -125,9 +125,9 @@ func getNewestVersionFromOCI(url string, chart string, targetRevision string, ac
 	tags := &models.TagsList{}
 
 	url = strings.TrimSuffix(url, "/")
-	url = strings.Replace(url, "https://", "", 1)
-	url = strings.Replace(url, "http://", "", 1)
-	url = strings.Replace(url, "oci://", "", 1)
+	url = strings.TrimPrefix(url, "https://")
+	url = strings.TrimPrefix(url, "http://")
+	url = strings.TrimPrefix(url, "oci://")
 	url = url + "/" + chart
 	repo, err := remote.NewRepository(url)
 	if err != nil {
@@ -141,8 +141,12 @@ func getNewestVersionFromOCI(url string, chart string, targetRevision string, ac
 			tags.Tags = append(tags.Tags, convertedTag)
 		}
 
-		return err
+		return nil
 	})
+	if err != nil {
+		action.Debugf("Error getting tags: %v", err)
+		return nil, err
+	}
 
 	newest, err := parseOCINewest(tags, targetRevision, action, skipPreRelease)
 	if err != nil {
@@ -150,11 +154,5 @@ func getNewestVersionFromOCI(url string, chart string, targetRevision string, ac
 		return nil, err
 	}
 
-	if err != nil {
-		action.Debugf("Error getting tags: %v", err)
-		return nil, err
-	}
-
 	return newest, nil
-
 }

@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"sigs.k8s.io/yaml"
 
-	"github.com/ironashram/argocd-apps-action/internal"
+	"github.com/ironashram/argocd-apps-action/internal/mocks"
 	"github.com/ironashram/argocd-apps-action/models"
 
 	"github.com/Masterminds/semver/v3"
@@ -18,16 +18,21 @@ import (
 )
 
 func TestProcessFile(t *testing.T) {
-	mockAction := &internal.MockActionInterface{
+	mockAction := &mocks.MockActionInterface{
 		Inputs: map[string]string{},
 	}
-	mockRepo := &internal.MockGitRepo{}
-	mockGitHubClient := &internal.MockGithubClient{}
-	mockOSInterface := &internal.MockOS{}
+	mockOSInterface := &mocks.MockOS{}
 
 	cfg := &models.Config{
 		CreatePr:     false,
 		TargetBranch: "main",
+	}
+
+	u := &Updater{
+		GitOps:       &mocks.MockGitRepo{},
+		GitHubClient: &mocks.MockGithubClient{},
+		Config:       cfg,
+		Action:       mockAction,
 	}
 
 	httpmock.Activate()
@@ -64,7 +69,7 @@ spec:
 
 		mockOSInterface.On("ReadFile", mock.Anything).Return([]byte(fileContent), nil).Once()
 
-		err := processFile("invalid1.yaml", mockRepo, mockGitHubClient, cfg, mockAction, mockOSInterface)
+		err := u.processFile("invalid1.yaml", mockOSInterface)
 
 		assert.NoError(t, err)
 		mockAction.AssertExpectations(t)
@@ -82,7 +87,7 @@ spec:
 `)
 		mockOSInterface.On("ReadFile", mock.Anything).Return([]byte(fileContent), nil).Once()
 
-		err := processFile("invalid2.yaml", mockRepo, mockGitHubClient, cfg, mockAction, mockOSInterface)
+		err := u.processFile("invalid2.yaml", mockOSInterface)
 
 		assert.NoError(t, err)
 		mockAction.AssertExpectations(t)
@@ -102,18 +107,17 @@ spec:
 `)
 		mockOSInterface.On("ReadFile", mock.Anything).Return([]byte(fileContent), nil).Once()
 
-		err := processFile("valid.yaml", mockRepo, mockGitHubClient, cfg, mockAction, mockOSInterface)
+		err := u.processFile("valid.yaml", mockOSInterface)
 
 		assert.NoError(t, err)
 		mockAction.AssertExpectations(t)
 		mockOSInterface.AssertExpectations(t)
-		mockGitHubClient.AssertExpectations(t)
 	})
 }
 
 func TestUpdateTargetRevision(t *testing.T) {
-	mockAction := &internal.MockActionInterface{}
-	mockOSInterface := &internal.MockOS{}
+	mockAction := &mocks.MockActionInterface{}
+	mockOSInterface := &mocks.MockOS{}
 
 	fileContent := `spec:
   source:

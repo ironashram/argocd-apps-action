@@ -2,8 +2,7 @@ package argoaction
 
 import (
 	"context"
-	"path"
-
+	"fmt"
 	"net/http"
 
 	"github.com/go-git/go-git/v6"
@@ -15,13 +14,17 @@ import (
 	"golang.org/x/oauth2"
 )
 
+type Updater struct {
+	GitOps       internal.GitOperations
+	GitHubClient internal.GitHubClient
+	Config       *models.Config
+	Action       internal.ActionInterface
+}
+
 func StartUpdate(ctx context.Context, cfg *models.Config, action internal.ActionInterface) error {
-
-	repoPath := path.Join(cfg.Workspace)
-
-	repo, err := git.PlainOpen(repoPath)
+	repo, err := git.PlainOpen(cfg.Workspace)
 	if err != nil {
-		action.Fatalf("error: %v", err)
+		return fmt.Errorf("opening repository: %w", err)
 	}
 
 	gitOps := &internal.GitRepo{Repo: repo}
@@ -35,9 +38,16 @@ func StartUpdate(ctx context.Context, cfg *models.Config, action internal.Action
 	githubClient := github.NewClient(tc)
 	realClient := &internal.RealGitHubClient{Client: githubClient}
 
-	err = checkForUpdates(gitOps, realClient, cfg, action)
+	u := &Updater{
+		GitOps:       gitOps,
+		GitHubClient: realClient,
+		Config:       cfg,
+		Action:       action,
+	}
+
+	err = u.CheckForUpdates()
 	if err != nil {
-		action.Fatalf("error: %v", err)
+		return fmt.Errorf("checking for updates: %w", err)
 	}
 
 	return nil

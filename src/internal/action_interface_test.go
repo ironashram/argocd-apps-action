@@ -1,21 +1,22 @@
-package internal
+package internal_test
 
 import (
 	"testing"
 
+	"github.com/ironashram/argocd-apps-action/internal/mocks"
 	"github.com/stretchr/testify/mock"
 )
 
 func TestActionInterface_GetInput(t *testing.T) {
 	testCases := []struct {
 		name     string
-		action   *MockActionInterface
+		action   *mocks.MockActionInterface
 		input    string
 		expected string
 	}{
 		{
 			name: "Test Case 1",
-			action: &MockActionInterface{
+			action: &mocks.MockActionInterface{
 				Inputs: map[string]string{
 					"input1": "value1",
 					"input2": "value2",
@@ -26,7 +27,7 @@ func TestActionInterface_GetInput(t *testing.T) {
 		},
 		{
 			name: "Test Case 2",
-			action: &MockActionInterface{
+			action: &mocks.MockActionInterface{
 				Inputs: map[string]string{
 					"input1": "value1",
 					"input2": "value2",
@@ -50,13 +51,13 @@ func TestActionInterface_GetInput(t *testing.T) {
 func TestActionInterface_Getenv(t *testing.T) {
 	testCases := []struct {
 		name     string
-		action   *MockActionInterface
+		action   *mocks.MockActionInterface
 		env      string
 		expected string
 	}{
 		{
 			name: "Test Case 1",
-			action: &MockActionInterface{
+			action: &mocks.MockActionInterface{
 				Env: map[string]string{
 					"env1": "value1",
 					"env2": "value2",
@@ -67,7 +68,7 @@ func TestActionInterface_Getenv(t *testing.T) {
 		},
 		{
 			name: "Test Case 2",
-			action: &MockActionInterface{
+			action: &mocks.MockActionInterface{
 				Env: map[string]string{
 					"env1": "value1",
 					"env2": "value2",
@@ -91,13 +92,13 @@ func TestActionInterface_Getenv(t *testing.T) {
 func TestActionInterface_Debugf(t *testing.T) {
 	testCases := []struct {
 		name   string
-		action *MockActionInterface
+		action *mocks.MockActionInterface
 		format string
 		args   []any
 	}{
 		{
 			name: "Test Case 1",
-			action: &MockActionInterface{
+			action: &mocks.MockActionInterface{
 				Inputs: map[string]string{},
 				Env:    map[string]string{},
 			},
@@ -106,7 +107,7 @@ func TestActionInterface_Debugf(t *testing.T) {
 		},
 		{
 			name: "Test Case 2",
-			action: &MockActionInterface{
+			action: &mocks.MockActionInterface{
 				Inputs: map[string]string{},
 				Env:    map[string]string{},
 			},
@@ -126,13 +127,13 @@ func TestActionInterface_Debugf(t *testing.T) {
 func TestActionInterface_Fatalf(t *testing.T) {
 	testCases := []struct {
 		name   string
-		action *MockActionInterface
+		action *mocks.MockActionInterface
 		format string
 		args   []any
 	}{
 		{
 			name: "Test Case 1",
-			action: &MockActionInterface{
+			action: &mocks.MockActionInterface{
 				Inputs: map[string]string{},
 				Env:    map[string]string{},
 			},
@@ -141,7 +142,7 @@ func TestActionInterface_Fatalf(t *testing.T) {
 		},
 		{
 			name: "Test Case 2",
-			action: &MockActionInterface{
+			action: &mocks.MockActionInterface{
 				Inputs: map[string]string{},
 				Env:    map[string]string{},
 			},

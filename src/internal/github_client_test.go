@@ -1,14 +1,16 @@
-package internal
+package internal_test
 
 import (
 	"context"
 	"testing"
 
 	"github.com/google/go-github/v77/github"
+	"github.com/ironashram/argocd-apps-action/internal"
+	"github.com/ironashram/argocd-apps-action/internal/mocks"
 )
 
 func TestRealGitHubClient_PullRequests(t *testing.T) {
-	client := &RealGitHubClient{
+	client := &internal.RealGitHubClient{
 		Client: github.NewClient(nil),
 	}
 
@@ -20,9 +22,9 @@ func TestRealGitHubClient_PullRequests(t *testing.T) {
 }
 
 func TestMockClient_PullRequests(t *testing.T) {
-	mockPullRequestsService := &MockPullRequestsService{}
+	mockPullRequestsService := &mocks.MockPullRequestsService{}
 
-	client := &MockGithubClient{
+	client := &mocks.MockGithubClient{
 		PullRequestsService: mockPullRequestsService,
 	}
 
@@ -34,7 +36,7 @@ func TestMockClient_PullRequests(t *testing.T) {
 }
 
 func TestMockPullRequestsService_Create(t *testing.T) {
-	mockPullRequestsService := &MockPullRequestsService{}
+	mockPullRequestsService := &mocks.MockPullRequestsService{}
 
 	newPR := &github.NewPullRequest{
 		Title: github.String("Test Pull Request"),
