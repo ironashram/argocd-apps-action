@@ -2,8 +2,6 @@ package argoaction
 
 import (
 	"context"
-	"path"
-
 	"net/http"
 
 	"github.com/go-git/go-git/v6"
@@ -17,7 +15,7 @@ import (
 
 func StartUpdate(ctx context.Context, cfg *models.Config, action internal.ActionInterface) error {
 
-	repoPath := path.Join(cfg.Workspace)
+	repoPath := cfg.Workspace
 
 	repo, err := git.PlainOpen(repoPath)
 	if err != nil {
