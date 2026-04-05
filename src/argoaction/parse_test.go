@@ -8,17 +8,7 @@ import (
 	"github.com/ironashram/argocd-apps-action/internal"
 	"github.com/ironashram/argocd-apps-action/models"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 )
-
-type MockOS struct {
-	mock.Mock
-}
-
-func (m *MockOS) ReadFile(path string) ([]byte, error) {
-	args := m.Called(path)
-	return args.Get(0).([]byte), args.Error(1)
-}
 
 func TestReadAndParseYAML(t *testing.T) {
 	testCases := []struct {
