@@ -99,14 +99,16 @@ func (u *Updater) processFile(path string, osw internal.OSInterface) error {
 	u.Action.Debugf("Checking %s from %s, current version is %s", chart, url, targetRevision)
 
 	newest, err := getNewestVersionFromNative(url+"/index.yaml", chart, targetRevision, u.Action, u.Config.SkipPreRelease)
+	if err != nil && !strings.Contains(err.Error(), "unsupported protocol scheme") {
+		u.Action.Infof("Error getting newest version for %s: %v", chart, err)
+		return nil
+	}
 	if err != nil {
-		if strings.Contains(err.Error(), "unsupported protocol scheme") {
-			u.Action.Debugf("Does not look like a native chart repository, trying OCI\n")
-			newest, err = getNewestVersionFromOCI(url, chart, targetRevision, u.Action, u.Config.SkipPreRelease)
-			if err != nil {
-				u.Action.Infof("Error getting newest version: %v", err)
-				return nil
-			}
+		u.Action.Debugf("Not a native chart repository, trying OCI for %s", chart)
+		newest, err = getNewestVersionFromOCI(url, chart, targetRevision, u.Action, u.Config.SkipPreRelease)
+		if err != nil {
+			u.Action.Infof("Error getting newest version for %s: %v", chart, err)
+			return nil
 		}
 	}
 

@@ -31,7 +31,7 @@ func readAndParseYAML(osi internal.OSInterface, path string) (*models.Applicatio
 
 func parseNativeNewest(targetVersion string, versions []struct {
 	Version string `yaml:"version"`
-}, skipPreRelease bool) (*semver.Version, error) {
+}, skipPreRelease bool, action internal.ActionInterface) (*semver.Version, error) {
 	target, err := semver.NewVersion(targetVersion)
 	if err != nil {
 		return nil, err
@@ -41,7 +41,8 @@ func parseNativeNewest(targetVersion string, versions []struct {
 	for _, version := range versions {
 		upstream, err := semver.NewVersion(version.Version)
 		if err != nil {
-			return nil, err
+			action.Debugf("Skipping non-semver version %q: %v", version.Version, err)
+			continue
 		}
 
 		if skipPreRelease && upstream.Prerelease() != "" {
@@ -83,7 +84,7 @@ func getNewestVersionFromNative(url string, chart string, targetRevision string,
 		return nil, nil
 	}
 
-	newest, err := parseNativeNewest(targetRevision, index.Entries[chart], skipPreRelease)
+	newest, err := parseNativeNewest(targetRevision, index.Entries[chart], skipPreRelease, action)
 	if err != nil {
 		action.Debugf("Error comparing versions: %v", err)
 		return nil, err
@@ -103,8 +104,8 @@ func parseOCINewest(tags *models.TagsList, targetVersion string, action internal
 	for _, tag := range tags.Tags {
 		upstream, err := semver.NewVersion(tag)
 		if err != nil {
-			action.Debugf("Error parsing tag version: %v", err)
-			return nil, err
+			action.Debugf("Skipping non-semver tag %q: %v", tag, err)
+			continue
 		}
 
 		if skipPreRelease && upstream.Prerelease() != "" {
