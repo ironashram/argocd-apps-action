@@ -53,6 +53,10 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
+## Immutable Releases
+
+Since v1.6.0, each release ships a pre-built Go binary attached to an immutable GitHub Release. By pinning the action to a commit SHA (e.g. `ironashram/argocd-apps-action@56274b82d5397c88b2f0e84ef480b3ef71d1fe68 # v1.7.1`), there is no supply-chain risk since the referenced code and binary cannot be altered after release.
+
 ## Important Note about Pull Requests
 
 Please ensure that you have allowed GitHub Actions to create and approve pull requests. This is necessary for the correct operation of the action.
