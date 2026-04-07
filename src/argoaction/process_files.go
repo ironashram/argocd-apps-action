@@ -1,7 +1,8 @@
 package argoaction
 
 import (
-	"os"
+	"errors"
+	"io/fs"
 	"path"
 	"path/filepath"
 	"regexp"
@@ -17,11 +18,15 @@ var targetRevisionRe = regexp.MustCompile(`(.*targetRevision: ).*`)
 func (u *Updater) CheckForUpdates() error {
 	dir := path.Join(u.Config.Workspace, u.Config.AppsFolder)
 
-	var walkErr error
-	filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+	var errs []error
+	walkErr := filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			u.Action.Debugf("Error walking path: %v", err)
-			walkErr = err
+			errs = append(errs, err)
+			return nil
+		}
+
+		if d.IsDir() {
 			return nil
 		}
 
@@ -31,14 +36,17 @@ func (u *Updater) CheckForUpdates() error {
 			err := u.processFile(path, osw)
 			if err != nil {
 				u.Action.Debugf("Error processing file: %v", err)
-				walkErr = err
+				errs = append(errs, err)
 			}
 		}
 
 		return nil
 	})
+	if walkErr != nil {
+		errs = append(errs, walkErr)
+	}
 
-	return walkErr
+	return errors.Join(errs...)
 }
 
 func (u *Updater) matchesExtension(ext string) bool {
