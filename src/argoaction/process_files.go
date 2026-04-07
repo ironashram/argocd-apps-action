@@ -5,6 +5,7 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
@@ -24,7 +25,8 @@ func (u *Updater) CheckForUpdates() error {
 			return nil
 		}
 
-		if filepath.Ext(path) == ".yaml" {
+		ext := filepath.Ext(path)
+		if u.matchesExtension(ext) {
 			osw := &internal.OSWrapper{}
 			err := u.processFile(path, osw)
 			if err != nil {
@@ -37,6 +39,10 @@ func (u *Updater) CheckForUpdates() error {
 	})
 
 	return walkErr
+}
+
+func (u *Updater) matchesExtension(ext string) bool {
+	return slices.Contains(u.Config.FileExtensions, ext)
 }
 
 func updateTargetRevision(newest *semver.Version, path string, action internal.ActionInterface, osw internal.OSInterface) error {

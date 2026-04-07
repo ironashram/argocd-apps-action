@@ -26,6 +26,7 @@ func TestNewFromInputs(t *testing.T) {
 					"create_pr":       "true",
 					"apps_folder":     "apps",
 					"labels":          "github_actions, dependencies",
+					"file_extensions": "yaml,yml",
 				},
 				Env: map[string]string{
 					"GITHUB_TOKEN":      "abc123",
@@ -44,6 +45,7 @@ func TestNewFromInputs(t *testing.T) {
 				Owner:          "githubuser",
 				Name:           "my-repo",
 				Labels:         []string{"github_actions", "dependencies"},
+				FileExtensions: []string{".yaml", ".yml"},
 			},
 			expectedErr: nil,
 		},
@@ -56,6 +58,7 @@ func TestNewFromInputs(t *testing.T) {
 					"create_pr":       "false",
 					"apps_folder":     "applications",
 					"labels":          "github_actions, dependencies",
+					"file_extensions": "yaml,yml",
 				},
 				Env: map[string]string{
 					"GITHUB_TOKEN":      "xyz789",
@@ -74,6 +77,7 @@ func TestNewFromInputs(t *testing.T) {
 				Owner:          "githubuser",
 				Name:           "another-repo",
 				Labels:         []string{"github_actions", "dependencies"},
+				FileExtensions: []string{".yaml", ".yml"},
 			},
 			expectedErr: nil,
 		},
@@ -86,6 +90,7 @@ func TestNewFromInputs(t *testing.T) {
 			tc.action.On("Debugf", "target_branch: %s", mock.Anything).Once()
 			tc.action.On("Debugf", "create_pr: %v", mock.Anything).Once()
 			tc.action.On("Debugf", "apps_folder: %s", mock.Anything).Once()
+			tc.action.On("Debugf", "file_extensions: %v", mock.Anything).Once()
 			config, err := NewFromInputs(tc.action)
 
 			if err != tc.expectedErr {

@@ -15,6 +15,7 @@ func NewFromInputs(action internal.ActionInterface) (*models.Config, error) {
 	createPrStr := action.GetInput("create_pr")
 	appsFolder := action.GetInput("apps_folder")
 	labelsStr := action.GetInput("labels")
+	fileExtStr := action.GetInput("file_extensions")
 
 	createPr, err := strconv.ParseBool(createPrStr)
 	if err != nil {
@@ -27,9 +28,17 @@ func NewFromInputs(action internal.ActionInterface) (*models.Config, error) {
 	}
 
 	labels := strings.Split(labelsStr, ",")
-
 	for i, label := range labels {
 		labels[i] = strings.TrimSpace(label)
+	}
+
+	fileExtensions := strings.Split(fileExtStr, ",")
+	for i, ext := range fileExtensions {
+		ext = strings.TrimSpace(ext)
+		if !strings.HasPrefix(ext, ".") {
+			ext = "." + ext
+		}
+		fileExtensions[i] = ext
 	}
 
 	token := action.Getenv("GITHUB_TOKEN")
@@ -48,6 +57,7 @@ func NewFromInputs(action internal.ActionInterface) (*models.Config, error) {
 	action.Debugf("target_branch: %s", targetBranch)
 	action.Debugf("create_pr: %v", createPr)
 	action.Debugf("apps_folder: %s", appsFolder)
+	action.Debugf("file_extensions: %v", fileExtensions)
 
 	c := models.Config{
 		SkipPreRelease: skipPreRelease,
@@ -60,6 +70,7 @@ func NewFromInputs(action internal.ActionInterface) (*models.Config, error) {
 		Owner:          owner,
 		Name:           name,
 		Labels:         labels,
+		FileExtensions: fileExtensions,
 	}
 	return &c, nil
 }
