@@ -116,6 +116,93 @@ spec:
 	})
 }
 
+func TestProcessFile_NativeFetchError(t *testing.T) {
+	mockAction := &mocks.MockActionInterface{
+		Inputs: map[string]string{},
+	}
+	mockOSInterface := &mocks.MockOS{}
+
+	u := &Updater{
+		Config: &models.Config{},
+		Action: mockAction,
+	}
+
+	httpmock.Activate()
+	defer httpmock.DeactivateAndReset()
+
+	httpmock.RegisterResponder("GET", "https://broken.local/index.yaml",
+		httpmock.NewStringResponder(500, "server error"))
+
+	fileContent := []byte(`
+spec:
+  source:
+    chart: mychart
+    repoURL: https://broken.local
+    targetRevision: 1.0.0
+`)
+	mockOSInterface.On("ReadFile", mock.Anything).Return(fileContent, nil).Once()
+	mockAction.On("Debugf", mock.Anything, mock.Anything).Maybe()
+	mockAction.On("Infof", "Error getting newest version for %s: %v", mock.AnythingOfType("[]interface {}")).Once()
+
+	err := u.processFile("broken.yaml", mockOSInterface)
+
+	assert.NoError(t, err)
+	mockAction.AssertExpectations(t)
+}
+
+func TestProcessFile_NonSemverVersionsSkipped(t *testing.T) {
+	mockAction := &mocks.MockActionInterface{
+		Inputs: map[string]string{},
+	}
+	mockOSInterface := &mocks.MockOS{}
+
+	u := &Updater{
+		Config: &models.Config{},
+		Action: mockAction,
+	}
+
+	httpmock.Activate()
+	defer httpmock.DeactivateAndReset()
+
+	entries := models.Index{
+		Entries: map[string][]struct {
+			Version string `yaml:"version"`
+		}{
+			"mychart": {
+				{Version: "latest"},
+				{Version: "stable"},
+				{Version: "2.0.0"},
+			},
+		},
+	}
+
+	responder := func(req *http.Request) (*http.Response, error) {
+		yamlData, err := yaml.Marshal(entries)
+		if err != nil {
+			return httpmock.NewStringResponse(500, ""), err
+		}
+		return httpmock.NewBytesResponse(200, yamlData), nil
+	}
+	httpmock.RegisterResponder("GET", "https://test.local/index.yaml", responder)
+
+	fileContent := []byte(`
+spec:
+  source:
+    chart: mychart
+    repoURL: https://test.local
+    targetRevision: 1.0.0
+`)
+	mockOSInterface.On("ReadFile", mock.Anything).Return(fileContent, nil).Once()
+	mockAction.On("Debugf", mock.Anything, mock.Anything).Maybe()
+	mockAction.On("Infof", "There is a newer %s version: %s", mock.AnythingOfType("[]interface {}")).Once()
+	mockAction.On("Infof", "Create PR is disabled, skipping PR creation for %s", mock.AnythingOfType("[]interface {}")).Once()
+
+	err := u.processFile("test.yaml", mockOSInterface)
+
+	assert.NoError(t, err)
+	mockAction.AssertExpectations(t)
+}
+
 func TestUpdateTargetRevision(t *testing.T) {
 	mockAction := &mocks.MockActionInterface{}
 	mockOSInterface := &mocks.MockOS{}

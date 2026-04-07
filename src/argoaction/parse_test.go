@@ -108,7 +108,8 @@ func TestGetNewestVersion(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			result, err := parseNativeNewest(tc.targetVersion, tc.versions, tc.skipPreRelease)
+			mockAction := &mocks.MockActionInterface{}
+			result, err := parseNativeNewest(tc.targetVersion, tc.versions, tc.skipPreRelease, mockAction)
 
 			assert.Equal(t, tc.expected, result)
 			assert.Equal(t, tc.expectedErr, err)
