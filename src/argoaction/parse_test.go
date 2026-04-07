@@ -69,38 +69,26 @@ spec:
 	})
 }
 
-func TestGetNewestVersion(t *testing.T) {
+func TestFindNewest(t *testing.T) {
 	testCases := []struct {
-		name          string
-		targetVersion string
-		versions      []struct {
-			Version string `yaml:"version"`
-		}
+		name           string
+		targetVersion  string
+		candidates     []string
 		skipPreRelease bool
 		expected       *semver.Version
 		expectedErr    error
 	}{
 		{
-			name:          "Test Case 1",
-			targetVersion: "1.0.0",
-			versions: []struct {
-				Version string `yaml:"version"`
-			}{
-				{Version: "1.1.0"},
-				{Version: "1.4.0"},
-			},
+			name:           "Finds newest version",
+			targetVersion:  "1.0.0",
+			candidates:     []string{"1.1.0", "1.4.0"},
 			skipPreRelease: true,
 			expected:       semver.MustParse("1.4.0"),
 		},
 		{
-			name:          "Test Case 2",
-			targetVersion: "1.0.0",
-			versions: []struct {
-				Version string `yaml:"version"`
-			}{
-				{Version: "0.8.0"},
-				{Version: "0.9.5"},
-			},
+			name:           "No newer version",
+			targetVersion:  "1.0.0",
+			candidates:     []string{"0.8.0", "0.9.5"},
 			skipPreRelease: true,
 			expected:       nil,
 		},
@@ -109,7 +97,7 @@ func TestGetNewestVersion(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			mockAction := &mocks.MockActionInterface{}
-			result, err := parseNativeNewest(tc.targetVersion, tc.versions, tc.skipPreRelease, mockAction)
+			result, err := findNewest(tc.candidates, tc.targetVersion, tc.skipPreRelease, mockAction)
 
 			assert.Equal(t, tc.expected, result)
 			assert.Equal(t, tc.expectedErr, err)
