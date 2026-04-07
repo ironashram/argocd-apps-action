@@ -1,10 +1,12 @@
 package argoaction
 
 import (
-	"os"
+	"errors"
+	"io/fs"
 	"path"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
@@ -16,27 +18,39 @@ var targetRevisionRe = regexp.MustCompile(`(.*targetRevision: ).*`)
 func (u *Updater) CheckForUpdates() error {
 	dir := path.Join(u.Config.Workspace, u.Config.AppsFolder)
 
-	var walkErr error
-	filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+	var errs []error
+	walkErr := filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			u.Action.Debugf("Error walking path: %v", err)
-			walkErr = err
+			errs = append(errs, err)
 			return nil
 		}
 
-		if filepath.Ext(path) == ".yaml" {
+		if d.IsDir() {
+			return nil
+		}
+
+		ext := filepath.Ext(path)
+		if u.matchesExtension(ext) {
 			osw := &internal.OSWrapper{}
 			err := u.processFile(path, osw)
 			if err != nil {
 				u.Action.Debugf("Error processing file: %v", err)
-				walkErr = err
+				errs = append(errs, err)
 			}
 		}
 
 		return nil
 	})
+	if walkErr != nil {
+		errs = append(errs, walkErr)
+	}
 
-	return walkErr
+	return errors.Join(errs...)
+}
+
+func (u *Updater) matchesExtension(ext string) bool {
+	return slices.Contains(u.Config.FileExtensions, ext)
 }
 
 func updateTargetRevision(newest *semver.Version, path string, action internal.ActionInterface, osw internal.OSInterface) error {

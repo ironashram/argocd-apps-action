@@ -11,4 +11,5 @@ type Config struct {
 	Owner          string
 	Name           string
 	Labels         []string
+	FileExtensions []string
 }

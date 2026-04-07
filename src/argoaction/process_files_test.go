@@ -24,8 +24,9 @@ func TestProcessFile(t *testing.T) {
 	mockOSInterface := &mocks.MockOS{}
 
 	cfg := &models.Config{
-		CreatePr:     false,
-		TargetBranch: "main",
+		CreatePr:       false,
+		TargetBranch:   "main",
+		FileExtensions: []string{".yaml", ".yml"},
 	}
 
 	u := &Updater{
