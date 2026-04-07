@@ -96,7 +96,6 @@ func getNewestVersionFromNative(url string, chart string, targetRevision string,
 	return newest, nil
 }
 
-
 func getNewestVersionFromOCI(url string, chart string, targetRevision string, action internal.ActionInterface, skipPreRelease bool) (*semver.Version, error) {
 	tags := &models.TagsList{}
 
