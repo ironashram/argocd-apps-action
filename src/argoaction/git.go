@@ -44,11 +44,6 @@ func (u *Updater) createNewBranch(baseBranch, branchName string) error {
 		return fmt.Errorf("failed to create new branch: %w", err)
 	}
 
-	worktree, err = u.GitOps.Worktree()
-	if err != nil {
-		return err
-	}
-
 	err = worktree.Checkout(&git.CheckoutOptions{
 		Branch: newBranchRefName,
 	})

@@ -3,7 +3,6 @@ package argoaction
 import (
 	"context"
 	"fmt"
-	"net/http"
 
 	"github.com/go-git/go-git/v6"
 	"github.com/ironashram/argocd-apps-action/internal"
@@ -32,7 +31,6 @@ func StartUpdate(ctx context.Context, cfg *models.Config, action internal.Action
 	ts := oauth2.StaticTokenSource(
 		&oauth2.Token{AccessToken: cfg.Token},
 	)
-	ctx = context.WithValue(ctx, oauth2.HTTPClient, &http.Client{})
 	tc := oauth2.NewClient(ctx, ts)
 
 	githubClient := github.NewClient(tc)
