@@ -32,13 +32,19 @@ func NewFromInputs(action internal.ActionInterface) (*models.Config, error) {
 		labels[i] = strings.TrimSpace(label)
 	}
 
-	fileExtensions := strings.Split(fileExtStr, ",")
-	for i, ext := range fileExtensions {
+	var fileExtensions []string
+	for _, ext := range strings.Split(fileExtStr, ",") {
 		ext = strings.TrimSpace(ext)
+		if ext == "" {
+			continue
+		}
 		if !strings.HasPrefix(ext, ".") {
 			ext = "." + ext
 		}
-		fileExtensions[i] = ext
+		fileExtensions = append(fileExtensions, ext)
+	}
+	if len(fileExtensions) == 0 {
+		return nil, fmt.Errorf("file_extensions input is empty")
 	}
 
 	token := action.Getenv("GITHUB_TOKEN")
