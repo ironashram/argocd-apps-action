@@ -18,6 +18,7 @@ var targetRevisionRe = regexp.MustCompile(`(.*targetRevision: ).*`)
 func (u *Updater) CheckForUpdates() error {
 	dir := path.Join(u.Config.Workspace, u.Config.AppsFolder)
 
+	osw := &internal.OSWrapper{}
 	var errs []error
 	walkErr := filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -32,7 +33,6 @@ func (u *Updater) CheckForUpdates() error {
 
 		ext := filepath.Ext(path)
 		if u.matchesExtension(ext) {
-			osw := &internal.OSWrapper{}
 			err := u.processFile(path, osw)
 			if err != nil {
 				u.Action.Debugf("Error processing file: %v", err)
