@@ -24,11 +24,19 @@ func (c *MockGithubClient) Issues() internal.IssuesService {
 
 type MockPullRequestsService struct {
 	CreateFunc func(ctx context.Context, owner string, repo string, newPR *github.NewPullRequest) (*github.PullRequest, *github.Response, error)
+	ListFunc   func(ctx context.Context, owner string, repo string, opts *github.PullRequestListOptions) ([]*github.PullRequest, *github.Response, error)
 }
 
 func (s *MockPullRequestsService) Create(ctx context.Context, owner string, repo string, newPR *github.NewPullRequest) (*github.PullRequest, *github.Response, error) {
 	if s.CreateFunc != nil {
 		return s.CreateFunc(ctx, owner, repo, newPR)
+	}
+	return nil, nil, nil
+}
+
+func (s *MockPullRequestsService) List(ctx context.Context, owner string, repo string, opts *github.PullRequestListOptions) ([]*github.PullRequest, *github.Response, error) {
+	if s.ListFunc != nil {
+		return s.ListFunc(ctx, owner, repo, opts)
 	}
 	return nil, nil, nil
 }

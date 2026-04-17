@@ -13,6 +13,7 @@ type GitHubClient interface {
 
 type PullRequestsService interface {
 	Create(ctx context.Context, owner string, repo string, newPR *github.NewPullRequest) (*github.PullRequest, *github.Response, error)
+	List(ctx context.Context, owner string, repo string, opts *github.PullRequestListOptions) ([]*github.PullRequest, *github.Response, error)
 }
 
 type IssuesService interface {
