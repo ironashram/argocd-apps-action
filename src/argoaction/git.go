@@ -11,6 +11,7 @@ import (
 	"github.com/Masterminds/semver/v3"
 	githttp "github.com/go-git/go-git/v6/plumbing/transport/http"
 	"github.com/ironashram/argocd-apps-action/internal"
+	"github.com/ironashram/argocd-apps-action/models"
 
 	"github.com/go-git/go-git/v6"
 	"github.com/go-git/go-git/v6/config"
@@ -54,7 +55,7 @@ func (u *Updater) createNewBranch(baseBranch, branchName string) error {
 	return nil
 }
 
-func (u *Updater) commitChanges(path string, commitMessage string) error {
+func (u *Updater) commitChanges(paths []string, commitMessage string) error {
 	worktree, err := u.GitOps.Worktree()
 	if err != nil {
 		return fmt.Errorf("failed to commit changes: %w", err)
@@ -65,14 +66,14 @@ func (u *Updater) commitChanges(path string, commitMessage string) error {
 		return fmt.Errorf("failed to get worktree root: %w", err)
 	}
 
-	relativePath, err := filepath.Rel(basePath, path)
-	if err != nil {
-		return fmt.Errorf("failed to get relative path: %w", err)
-	}
-
-	_, err = worktree.Add(relativePath)
-	if err != nil {
-		return err
+	for _, p := range paths {
+		relativePath, err := filepath.Rel(basePath, p)
+		if err != nil {
+			return fmt.Errorf("failed to get relative path for %s: %w", p, err)
+		}
+		if _, err := worktree.Add(relativePath); err != nil {
+			return fmt.Errorf("failed to stage %s: %w", relativePath, err)
+		}
 	}
 
 	_, err = worktree.Commit(commitMessage, &git.CommitOptions{
@@ -170,10 +171,8 @@ func (u *Updater) findExistingPR(ctx context.Context, branchName string) (*githu
 	return prs[0], nil
 }
 
-func (u *Updater) handleNewVersion(ctx context.Context, chart string, newest *semver.Version, path string, osw internal.OSInterface) error {
-	filename := filepath.Base(path)
-	filename = strings.TrimSuffix(filename, filepath.Ext(filename))
-	branchName := "update-" + chart + "-" + filename + "-" + newest.String()
+func (u *Updater) handleChartGroup(ctx context.Context, chart string, newest *semver.Version, files []models.AppFile, osw internal.OSInterface) error {
+	branchName := "update-" + chart + "-" + newest.String()
 
 	existing, err := u.findExistingPR(ctx, branchName)
 	if err != nil {
@@ -188,13 +187,16 @@ func (u *Updater) handleNewVersion(ctx context.Context, chart string, newest *se
 		return fmt.Errorf("creating new branch: %w", err)
 	}
 
-	err = updateTargetRevision(newest, path, u.Action, osw)
-	if err != nil {
-		return fmt.Errorf("updating target revision: %w", err)
+	paths := make([]string, 0, len(files))
+	for _, f := range files {
+		if err := updateTargetRevision(newest, f.Path, u.Action, osw); err != nil {
+			return fmt.Errorf("updating target revision for %s: %w", f.Path, err)
+		}
+		paths = append(paths, f.Path)
 	}
 
 	commitMessage := "chore: bump " + chart + " to version " + newest.String()
-	err = u.commitChanges(path, commitMessage)
+	err = u.commitChanges(paths, commitMessage)
 	if err != nil {
 		if strings.Contains(err.Error(), "cannot create empty commit: clean working tree") {
 			u.Action.Infof("No changes to commit for %s, branch already up to date", chart)
@@ -213,7 +215,7 @@ func (u *Updater) handleNewVersion(ctx context.Context, chart string, newest *se
 	}
 
 	prTitle := "chore: bump " + chart + " to version " + newest.String()
-	prBody := "This PR updates " + chart + " to version " + newest.String()
+	prBody := buildPRBody(chart, newest, files)
 	pr, err := u.createPullRequest(ctx, u.Config.TargetBranch, branchName, prTitle, prBody)
 	if err != nil {
 		return fmt.Errorf("creating pull request: %w", err)
@@ -225,6 +227,16 @@ func (u *Updater) handleNewVersion(ctx context.Context, chart string, newest *se
 		return fmt.Errorf("adding labels to pull request: %w", err)
 	}
 
-	u.Action.Infof("Pull request created for %s", chart)
+	u.Action.Infof("Pull request created for %s (%d file(s))", chart, len(files))
 	return nil
+}
+
+func buildPRBody(chart string, newest *semver.Version, files []models.AppFile) string {
+	var b strings.Builder
+	fmt.Fprintf(&b, "This PR updates %s to version %s.\n\n", chart, newest)
+	fmt.Fprintln(&b, "Files updated:")
+	for _, f := range files {
+		fmt.Fprintf(&b, "- %s (%s → %s)\n", f.Path, f.CurrentVersion, newest)
+	}
+	return b.String()
 }

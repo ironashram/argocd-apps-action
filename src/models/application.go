@@ -19,3 +19,13 @@ type Index struct {
 		Version string `yaml:"version"`
 	} `yaml:"entries"`
 }
+
+type ChartRef struct {
+	RepoURL string
+	Chart   string
+}
+
+type AppFile struct {
+	Path           string
+	CurrentVersion string
+}

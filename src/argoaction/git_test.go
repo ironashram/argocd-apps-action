@@ -153,7 +153,7 @@ func TestCommitChanges(t *testing.T) {
 
 	u := &Updater{GitOps: mockRepo}
 
-	err := u.commitChanges("/valid/path", "Test commit")
+	err := u.commitChanges([]string{"/valid/path"}, "Test commit")
 
 	assert.NoError(t, err)
 	mockRepo.AssertExpectations(t)
@@ -199,7 +199,7 @@ func TestCommitChanges_Error(t *testing.T) {
 
 	u := &Updater{GitOps: mockRepo}
 
-	err := u.commitChanges(".", "Test commit")
+	err := u.commitChanges([]string{"."}, "Test commit")
 	assert.EqualError(t, err, fmt.Errorf("failed to commit changes: %w", expectedError).Error())
 	mockRepo.AssertExpectations(t)
 	mockWorktree.AssertExpectations(t)

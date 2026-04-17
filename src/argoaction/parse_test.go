@@ -8,6 +8,7 @@ import (
 	"github.com/ironashram/argocd-apps-action/internal/mocks"
 	"github.com/ironashram/argocd-apps-action/models"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
 
 func TestReadAndParseYAML(t *testing.T) {
@@ -69,38 +70,51 @@ spec:
 	})
 }
 
-func TestFindNewest(t *testing.T) {
+func TestPickNewest(t *testing.T) {
 	testCases := []struct {
 		name           string
-		targetVersion  string
 		candidates     []string
 		skipPreRelease bool
 		expected       *semver.Version
-		expectedErr    error
 	}{
 		{
-			name:           "Finds newest version",
-			targetVersion:  "1.0.0",
-			candidates:     []string{"1.1.0", "1.4.0"},
+			name:           "Finds newest",
+			candidates:     []string{"1.1.0", "1.4.0", "0.9.0"},
 			skipPreRelease: true,
 			expected:       semver.MustParse("1.4.0"),
 		},
 		{
-			name:           "No newer version",
-			targetVersion:  "1.0.0",
-			candidates:     []string{"0.8.0", "0.9.5"},
+			name:           "Empty input",
+			candidates:     nil,
 			skipPreRelease: true,
 			expected:       nil,
+		},
+		{
+			name:           "Skips prereleases when enabled",
+			candidates:     []string{"1.0.0", "1.1.0-rc.1"},
+			skipPreRelease: true,
+			expected:       semver.MustParse("1.0.0"),
+		},
+		{
+			name:           "Includes prereleases when allowed",
+			candidates:     []string{"1.0.0", "1.1.0-rc.1"},
+			skipPreRelease: false,
+			expected:       semver.MustParse("1.1.0-rc.1"),
+		},
+		{
+			name:           "Non-semver entries skipped",
+			candidates:     []string{"latest", "stable", "2.0.0", "1.5.0"},
+			skipPreRelease: true,
+			expected:       semver.MustParse("2.0.0"),
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			mockAction := &mocks.MockActionInterface{}
-			result, err := findNewest(tc.candidates, tc.targetVersion, tc.skipPreRelease, mockAction)
-
+			mockAction.On("Debugf", mock.Anything, mock.Anything).Maybe()
+			result := pickNewest(tc.candidates, tc.skipPreRelease, mockAction)
 			assert.Equal(t, tc.expected, result)
-			assert.Equal(t, tc.expectedErr, err)
 		})
 	}
 }
