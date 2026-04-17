@@ -215,7 +215,7 @@ func (u *Updater) handleChartGroup(ctx context.Context, chart string, newest *se
 	}
 
 	prTitle := "chore: bump " + chart + " to version " + newest.String()
-	prBody := buildPRBody(chart, newest, files)
+	prBody := buildPRBody(chart, newest, files, u.Config.Workspace)
 	pr, err := u.createPullRequest(ctx, u.Config.TargetBranch, branchName, prTitle, prBody)
 	if err != nil {
 		return fmt.Errorf("creating pull request: %w", err)
@@ -231,12 +231,16 @@ func (u *Updater) handleChartGroup(ctx context.Context, chart string, newest *se
 	return nil
 }
 
-func buildPRBody(chart string, newest *semver.Version, files []models.AppFile) string {
+func buildPRBody(chart string, newest *semver.Version, files []models.AppFile, workspace string) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "This PR updates %s to version %s.\n\n", chart, newest)
 	fmt.Fprintln(&b, "Files updated:")
 	for _, f := range files {
-		fmt.Fprintf(&b, "- %s (%s → %s)\n", f.Path, f.CurrentVersion, newest)
+		display := f.Path
+		if rel, err := filepath.Rel(workspace, f.Path); err == nil {
+			display = rel
+		}
+		fmt.Fprintf(&b, "- %s (%s → %s)\n", display, f.CurrentVersion, newest)
 	}
 	return b.String()
 }
