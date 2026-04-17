@@ -57,7 +57,7 @@ func TestCreatePullRequest(t *testing.T) {
 		Action:       mockAction,
 	}
 
-	_, err := u.createPullRequest(baseBranch, newBranch, title, body)
+	_, err := u.createPullRequest(context.Background(), baseBranch, newBranch, title, body)
 	assert.NoError(t, err)
 
 	expectedError := errors.New("failed to create pull request")
@@ -69,7 +69,7 @@ func TestCreatePullRequest(t *testing.T) {
 		},
 	}
 
-	_, err = u.createPullRequest(baseBranch, newBranch, title, body)
+	_, err = u.createPullRequest(context.Background(), baseBranch, newBranch, title, body)
 	assert.EqualError(t, err, expectedError.Error())
 }
 
@@ -116,7 +116,7 @@ func TestCreatePullRequest_Error(t *testing.T) {
 		Action:       mockAction,
 	}
 
-	_, err := u.createPullRequest(baseBranch, newBranch, title, body)
+	_, err := u.createPullRequest(context.Background(), baseBranch, newBranch, title, body)
 	assert.EqualError(t, err, expectedError.Error())
 }
 

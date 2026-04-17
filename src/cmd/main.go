@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"os/signal"
+	"syscall"
 
 	"github.com/ironashram/argocd-apps-action/argoaction"
 	"github.com/ironashram/argocd-apps-action/config"
@@ -9,7 +11,9 @@ import (
 )
 
 func main() {
-	ctx := context.Background()
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+
 	action := internal.NewGithubActionInterface()
 
 	cfg, err := config.NewFromInputs(action)
