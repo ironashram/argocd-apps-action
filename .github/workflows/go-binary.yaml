@@ -95,12 +95,12 @@ jobs:
             go build -o "${{ github.workspace }}/$BINARY" ./cmd
           cd ${{ github.workspace }}
           tar czf "${ASSET}.tar.gz" "$BINARY"
-          md5sum "${ASSET}.tar.gz" | cut -d ' ' -f1 > "${ASSET}.tar.gz.md5"
+          sha256sum "${ASSET}.tar.gz" | cut -d ' ' -f1 > "${ASSET}.tar.gz.sha256"
 
       - name: Upload Assets
         run: |
           ASSET="argocd-apps-action-${{ github.ref_name }}-${{ matrix.goos }}-${{ matrix.goarch }}"
-          gh release upload "${{ github.ref_name }}" "${ASSET}.tar.gz" "${ASSET}.tar.gz.md5"
+          gh release upload "${{ github.ref_name }}" "${ASSET}.tar.gz" "${ASSET}.tar.gz.sha256"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

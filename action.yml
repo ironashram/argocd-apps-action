@@ -36,20 +36,15 @@ runs:
         ACTION_VERSION: "v1.8.0"
       shell: bash
       run: |
-        wget https://github.com/ironashram/argocd-apps-action/releases/download/${ACTION_VERSION}/argocd-apps-action-${ACTION_VERSION}-linux-amd64.tar.gz
-        wget https://github.com/ironashram/argocd-apps-action/releases/download/${ACTION_VERSION}/argocd-apps-action-${ACTION_VERSION}-linux-amd64.tar.gz.md5
-        echo "Verifying MD5 checksum"
-        md5sum argocd-apps-action-${ACTION_VERSION}-linux-amd64.tar.gz > checksum
-        grep $(cat argocd-apps-action-${ACTION_VERSION}-linux-amd64.tar.gz.md5) checksum
-        if [ $? -eq 0 ]; then
-          echo "Checksum verified"
-          tar -xvf argocd-apps-action-${ACTION_VERSION}-linux-amd64.tar.gz
-          chmod +x argocd-apps-action
-          mv argocd-apps-action /usr/local/bin/argocd-apps-action
-        else
-          echo "Checksum verification failed"
-          exit 1
-        fi
+        ASSET="argocd-apps-action-${ACTION_VERSION}-linux-amd64.tar.gz"
+        BASE="https://github.com/ironashram/argocd-apps-action/releases/download/${ACTION_VERSION}"
+        curl -fsSL -o "${ASSET}" "${BASE}/${ASSET}"
+        curl -fsSL -o "${ASSET}.sha256" "${BASE}/${ASSET}.sha256"
+        echo "Verifying SHA-256 checksum"
+        echo "$(cat ${ASSET}.sha256)  ${ASSET}" | sha256sum -c -
+        tar -xvf "${ASSET}"
+        chmod +x argocd-apps-action
+        mv argocd-apps-action /usr/local/bin/argocd-apps-action
 
     - name: Run the ArgoCD Apps Action
       env:
