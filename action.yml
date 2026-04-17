@@ -33,7 +33,7 @@ runs:
   steps:
     - name: Download ArgoCD Apps Action Binary
       env:
-        ACTION_VERSION: "v1.8.0"
+        ACTION_VERSION: "v2.0.0"
       shell: bash
       run: |
         ASSET="argocd-apps-action-${ACTION_VERSION}-linux-amd64.tar.gz"
