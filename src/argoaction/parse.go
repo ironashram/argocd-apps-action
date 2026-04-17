@@ -29,35 +29,25 @@ func readAndParseYAML(osi internal.OSInterface, path string) (*models.Applicatio
 	return &app, nil
 }
 
-func findNewest(candidates []string, targetVersion string, skipPreRelease bool, action internal.ActionInterface) (*semver.Version, error) {
-	target, err := semver.NewVersion(targetVersion)
-	if err != nil {
-		return nil, err
-	}
-
+func pickNewest(candidates []string, skipPreRelease bool, action internal.ActionInterface) *semver.Version {
 	var newest *semver.Version
 	for _, candidate := range candidates {
-		upstream, err := semver.NewVersion(candidate)
+		v, err := semver.NewVersion(candidate)
 		if err != nil {
 			action.Debugf("Skipping non-semver version %q: %v", candidate, err)
 			continue
 		}
-
-		if skipPreRelease && upstream.Prerelease() != "" {
+		if skipPreRelease && v.Prerelease() != "" {
 			continue
 		}
-
-		if target.LessThan(upstream) {
-			if newest == nil || newest.LessThan(upstream) {
-				newest = upstream
-			}
+		if newest == nil || newest.LessThan(v) {
+			newest = v
 		}
 	}
-
-	return newest, nil
+	return newest
 }
 
-func getNewestVersionFromNative(ctx context.Context, url string, chart string, targetRevision string, action internal.ActionInterface, skipPreRelease bool) (*semver.Version, error) {
+func listVersionsFromNative(ctx context.Context, url string, chart string, action internal.ActionInterface) ([]string, error) {
 	var index models.Index
 
 	body, err := utils.GetHTTPResponse(ctx, url)
@@ -77,40 +67,31 @@ func getNewestVersionFromNative(ctx context.Context, url string, chart string, t
 		return nil, nil
 	}
 
-	if _, ok := index.Entries[chart]; !ok || len(index.Entries[chart]) == 0 {
+	entry, ok := index.Entries[chart]
+	if !ok || len(entry) == 0 {
 		action.Debugf("Chart entry %s does not exist or is empty at %s", chart, url)
 		return nil, nil
 	}
 
-	var versions []string
-	for _, v := range index.Entries[chart] {
+	versions := make([]string, 0, len(entry))
+	for _, v := range entry {
 		versions = append(versions, v.Version)
 	}
-
-	newest, err := findNewest(versions, targetRevision, skipPreRelease, action)
-	if err != nil {
-		action.Debugf("Error comparing versions: %v", err)
-		return nil, err
-	}
-
-	return newest, nil
+	return versions, nil
 }
 
-func getNewestVersionFromOCI(ctx context.Context, url string, chart string, targetRevision string, action internal.ActionInterface, skipPreRelease bool) (*semver.Version, error) {
-	tags := &models.TagsList{}
-
+func listVersionsFromOCI(ctx context.Context, url string, chart string, action internal.ActionInterface) ([]string, error) {
 	url = strings.TrimSuffix(url, "/") + "/" + chart
 	repo, err := remote.NewRepository(url)
 	if err != nil {
 		return nil, err
 	}
 
+	var versions []string
 	err = repo.Tags(ctx, "", func(tagsResult []string) error {
 		for _, tag := range tagsResult {
-			convertedTag := strings.ReplaceAll(tag, "_", "+")
-			tags.Tags = append(tags.Tags, convertedTag)
+			versions = append(versions, strings.ReplaceAll(tag, "_", "+"))
 		}
-
 		return nil
 	})
 	if err != nil {
@@ -118,11 +99,5 @@ func getNewestVersionFromOCI(ctx context.Context, url string, chart string, targ
 		return nil, err
 	}
 
-	newest, err := findNewest(tags.Tags, targetRevision, skipPreRelease, action)
-	if err != nil {
-		action.Debugf("Error comparing versions: %v", err)
-		return nil, err
-	}
-
-	return newest, nil
+	return versions, nil
 }
