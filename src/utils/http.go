@@ -1,13 +1,22 @@
 package utils
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net/http"
+	"time"
 )
 
-func GetHTTPResponse(url string) ([]byte, error) {
-	resp, err := http.Get(url)
+var httpClient = &http.Client{Timeout: 30 * time.Second}
+
+func GetHTTPResponse(ctx context.Context, url string) ([]byte, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		return nil, err
 	}

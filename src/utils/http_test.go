@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -54,7 +55,7 @@ func TestGetHTTPResponse(t *testing.T) {
 	// Run tests
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			result, err := GetHTTPResponse(tc.url)
+			result, err := GetHTTPResponse(context.Background(), tc.url)
 			if err != nil {
 				if tc.err == nil || err.Error() != tc.err.Error() {
 					t.Errorf("Expected error: %v, got: %v", tc.err, err)
