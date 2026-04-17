@@ -1,6 +1,7 @@
 package argoaction
 
 import (
+	"context"
 	"net/http"
 	"os"
 	"strings"
@@ -70,7 +71,7 @@ spec:
 
 		mockOSInterface.On("ReadFile", mock.Anything).Return([]byte(fileContent), nil).Once()
 
-		err := u.processFile("invalid1.yaml", mockOSInterface)
+		err := u.processFile(context.Background(), "invalid1.yaml", mockOSInterface)
 
 		assert.NoError(t, err)
 		mockAction.AssertExpectations(t)
@@ -88,7 +89,7 @@ spec:
 `)
 		mockOSInterface.On("ReadFile", mock.Anything).Return([]byte(fileContent), nil).Once()
 
-		err := u.processFile("invalid2.yaml", mockOSInterface)
+		err := u.processFile(context.Background(), "invalid2.yaml", mockOSInterface)
 
 		assert.NoError(t, err)
 		mockAction.AssertExpectations(t)
@@ -108,7 +109,7 @@ spec:
 `)
 		mockOSInterface.On("ReadFile", mock.Anything).Return([]byte(fileContent), nil).Once()
 
-		err := u.processFile("valid.yaml", mockOSInterface)
+		err := u.processFile(context.Background(), "valid.yaml", mockOSInterface)
 
 		assert.NoError(t, err)
 		mockAction.AssertExpectations(t)
@@ -144,7 +145,7 @@ spec:
 	mockAction.On("Debugf", mock.Anything, mock.Anything).Maybe()
 	mockAction.On("Infof", "Error getting newest version for %s: %v", mock.AnythingOfType("[]interface {}")).Once()
 
-	err := u.processFile("broken.yaml", mockOSInterface)
+	err := u.processFile(context.Background(), "broken.yaml", mockOSInterface)
 
 	assert.NoError(t, err)
 	mockAction.AssertExpectations(t)
@@ -197,7 +198,7 @@ spec:
 	mockAction.On("Infof", "There is a newer %s version: %s", mock.AnythingOfType("[]interface {}")).Once()
 	mockAction.On("Infof", "Create PR is disabled, skipping PR creation for %s", mock.AnythingOfType("[]interface {}")).Once()
 
-	err := u.processFile("test.yaml", mockOSInterface)
+	err := u.processFile(context.Background(), "test.yaml", mockOSInterface)
 
 	assert.NoError(t, err)
 	mockAction.AssertExpectations(t)

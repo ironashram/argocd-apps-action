@@ -22,6 +22,14 @@ type GitRepo struct {
 	Repo *git.Repository
 }
 
+func OpenRepo(path string) (*GitRepo, error) {
+	repo, err := git.PlainOpen(path)
+	if err != nil {
+		return nil, err
+	}
+	return &GitRepo{Repo: repo}, nil
+}
+
 func (r *GitRepo) Push(options *git.PushOptions) error {
 	return r.Repo.Push(options)
 }

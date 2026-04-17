@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -14,6 +15,11 @@ func NewFromInputs(action internal.ActionInterface) (*models.Config, error) {
 	targetBranch := action.GetInput("target_branch")
 	createPrStr := action.GetInput("create_pr")
 	appsFolder := action.GetInput("apps_folder")
+	cleanedAppsFolder := filepath.Clean(appsFolder)
+	if filepath.IsAbs(cleanedAppsFolder) || cleanedAppsFolder == ".." || strings.HasPrefix(cleanedAppsFolder, ".."+string(filepath.Separator)) {
+		return nil, fmt.Errorf("apps_folder must be a relative path within the workspace: %q", appsFolder)
+	}
+	appsFolder = cleanedAppsFolder
 	labelsStr := action.GetInput("labels")
 	fileExtStr := action.GetInput("file_extensions")
 

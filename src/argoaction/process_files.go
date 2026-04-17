@@ -1,6 +1,7 @@
 package argoaction
 
 import (
+	"context"
 	"errors"
 	"io/fs"
 	"path"
@@ -15,7 +16,7 @@ import (
 
 var targetRevisionRe = regexp.MustCompile(`(.*targetRevision: ).*`)
 
-func (u *Updater) CheckForUpdates() error {
+func (u *Updater) CheckForUpdates(ctx context.Context) error {
 	dir := path.Join(u.Config.Workspace, u.Config.AppsFolder)
 
 	osw := &internal.OSWrapper{}
@@ -33,7 +34,7 @@ func (u *Updater) CheckForUpdates() error {
 
 		ext := filepath.Ext(path)
 		if u.matchesExtension(ext) {
-			err := u.processFile(path, osw)
+			err := u.processFile(ctx, path, osw)
 			if err != nil {
 				u.Action.Debugf("Error processing file: %v", err)
 				errs = append(errs, err)
@@ -80,7 +81,7 @@ func updateTargetRevision(newest *semver.Version, path string, action internal.A
 	return nil
 }
 
-func (u *Updater) processFile(path string, osw internal.OSInterface) error {
+func (u *Updater) processFile(ctx context.Context, path string, osw internal.OSInterface) error {
 	app, err := readAndParseYAML(osw, path)
 	if err != nil {
 		u.Action.Debugf("Error reading and parsing YAML: %v", err)
@@ -98,14 +99,14 @@ func (u *Updater) processFile(path string, osw internal.OSInterface) error {
 
 	u.Action.Debugf("Checking %s from %s, current version is %s", chart, url, targetRevision)
 
-	newest, err := getNewestVersionFromNative(url+"/index.yaml", chart, targetRevision, u.Action, u.Config.SkipPreRelease)
+	newest, err := getNewestVersionFromNative(ctx, url+"/index.yaml", chart, targetRevision, u.Action, u.Config.SkipPreRelease)
 	if err != nil && !strings.Contains(err.Error(), "unsupported protocol scheme") {
 		u.Action.Infof("Error getting newest version for %s: %v", chart, err)
 		return nil
 	}
 	if err != nil {
 		u.Action.Debugf("Not a native chart repository, trying OCI for %s", chart)
-		newest, err = getNewestVersionFromOCI(url, chart, targetRevision, u.Action, u.Config.SkipPreRelease)
+		newest, err = getNewestVersionFromOCI(ctx, url, chart, targetRevision, u.Action, u.Config.SkipPreRelease)
 		if err != nil {
 			u.Action.Infof("Error getting newest version for %s: %v", chart, err)
 			return nil
@@ -116,7 +117,7 @@ func (u *Updater) processFile(path string, osw internal.OSInterface) error {
 		u.Action.Infof("There is a newer %s version: %s", chart, newest)
 
 		if u.Config.CreatePr {
-			err = u.handleNewVersion(chart, newest, path, osw)
+			err = u.handleNewVersion(ctx, chart, newest, path, osw)
 			if err != nil {
 				return err
 			}

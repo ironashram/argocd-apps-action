@@ -105,7 +105,7 @@ func (u *Updater) pushChanges(branchName string) error {
 	return nil
 }
 
-func (u *Updater) createPullRequest(baseBranch string, newBranch string, title string, body string) (*github.PullRequest, error) {
+func (u *Updater) createPullRequest(ctx context.Context, baseBranch string, newBranch string, title string, body string) (*github.PullRequest, error) {
 	newPR := &github.NewPullRequest{
 		Title:               github.Ptr(title),
 		Head:                github.Ptr(newBranch),
@@ -123,7 +123,7 @@ func (u *Updater) createPullRequest(baseBranch string, newBranch string, title s
 		return nil, errors.New("PullRequests is nil")
 	}
 
-	pr, _, err := pullRequests.Create(context.Background(), u.Config.Owner, u.Config.Name, newPR)
+	pr, _, err := pullRequests.Create(ctx, u.Config.Owner, u.Config.Name, newPR)
 	if err != nil {
 		return pr, err
 	}
@@ -131,7 +131,7 @@ func (u *Updater) createPullRequest(baseBranch string, newBranch string, title s
 	return pr, nil
 }
 
-func (u *Updater) addLabelsToPullRequest(pr *github.PullRequest, labels []string) error {
+func (u *Updater) addLabelsToPullRequest(ctx context.Context, pr *github.PullRequest, labels []string) error {
 	if u.GitHubClient == nil {
 		return errors.New("githubClient is nil")
 	}
@@ -141,7 +141,7 @@ func (u *Updater) addLabelsToPullRequest(pr *github.PullRequest, labels []string
 		return errors.New("issues is nil")
 	}
 
-	_, _, err := issues.AddLabelsToIssue(context.Background(), u.Config.Owner, u.Config.Name, *pr.Number, labels)
+	_, _, err := issues.AddLabelsToIssue(ctx, u.Config.Owner, u.Config.Name, *pr.Number, labels)
 	if err != nil {
 		return err
 	}
@@ -149,11 +149,41 @@ func (u *Updater) addLabelsToPullRequest(pr *github.PullRequest, labels []string
 	return nil
 }
 
-func (u *Updater) handleNewVersion(chart string, newest *semver.Version, path string, osw internal.OSInterface) error {
+func (u *Updater) findExistingPR(ctx context.Context, branchName string) (*github.PullRequest, error) {
+	if u.GitHubClient == nil {
+		return nil, errors.New("githubClient is nil")
+	}
+	pullRequests := u.GitHubClient.PullRequests()
+	if pullRequests == nil {
+		return nil, errors.New("PullRequests is nil")
+	}
+	prs, _, err := pullRequests.List(ctx, u.Config.Owner, u.Config.Name, &github.PullRequestListOptions{
+		State: "open",
+		Head:  u.Config.Owner + ":" + branchName,
+	})
+	if err != nil {
+		return nil, err
+	}
+	if len(prs) == 0 {
+		return nil, nil
+	}
+	return prs[0], nil
+}
+
+func (u *Updater) handleNewVersion(ctx context.Context, chart string, newest *semver.Version, path string, osw internal.OSInterface) error {
 	filename := filepath.Base(path)
 	filename = strings.TrimSuffix(filename, filepath.Ext(filename))
 	branchName := "update-" + chart + "-" + filename + "-" + newest.String()
-	err := u.createNewBranch(u.Config.TargetBranch, branchName)
+
+	existing, err := u.findExistingPR(ctx, branchName)
+	if err != nil {
+		u.Action.Debugf("Error checking for existing PR: %v", err)
+	} else if existing != nil {
+		u.Action.Infof("PR #%d already open for %s, skipping", *existing.Number, chart)
+		return nil
+	}
+
+	err = u.createNewBranch(u.Config.TargetBranch, branchName)
 	if err != nil {
 		return fmt.Errorf("creating new branch: %w", err)
 	}
@@ -184,13 +214,13 @@ func (u *Updater) handleNewVersion(chart string, newest *semver.Version, path st
 
 	prTitle := "chore: bump " + chart + " to version " + newest.String()
 	prBody := "This PR updates " + chart + " to version " + newest.String()
-	pr, err := u.createPullRequest(u.Config.TargetBranch, branchName, prTitle, prBody)
+	pr, err := u.createPullRequest(ctx, u.Config.TargetBranch, branchName, prTitle, prBody)
 	if err != nil {
 		return fmt.Errorf("creating pull request: %w", err)
 	}
 
 	labels := u.Config.Labels
-	err = u.addLabelsToPullRequest(pr, labels)
+	err = u.addLabelsToPullRequest(ctx, pr, labels)
 	if err != nil {
 		return fmt.Errorf("adding labels to pull request: %w", err)
 	}

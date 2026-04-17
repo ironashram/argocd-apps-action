@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/go-git/go-git/v6"
 	"github.com/ironashram/argocd-apps-action/internal"
 	"github.com/ironashram/argocd-apps-action/models"
 
@@ -21,12 +20,10 @@ type Updater struct {
 }
 
 func StartUpdate(ctx context.Context, cfg *models.Config, action internal.ActionInterface) error {
-	repo, err := git.PlainOpen(cfg.Workspace)
+	gitOps, err := internal.OpenRepo(cfg.Workspace)
 	if err != nil {
 		return fmt.Errorf("opening repository: %w", err)
 	}
-
-	gitOps := &internal.GitRepo{Repo: repo}
 
 	ts := oauth2.StaticTokenSource(
 		&oauth2.Token{AccessToken: cfg.Token},
@@ -43,7 +40,7 @@ func StartUpdate(ctx context.Context, cfg *models.Config, action internal.Action
 		Action:       action,
 	}
 
-	err = u.CheckForUpdates()
+	err = u.CheckForUpdates(ctx)
 	if err != nil {
 		return fmt.Errorf("checking for updates: %w", err)
 	}

@@ -57,10 +57,10 @@ func findNewest(candidates []string, targetVersion string, skipPreRelease bool, 
 	return newest, nil
 }
 
-func getNewestVersionFromNative(url string, chart string, targetRevision string, action internal.ActionInterface, skipPreRelease bool) (*semver.Version, error) {
+func getNewestVersionFromNative(ctx context.Context, url string, chart string, targetRevision string, action internal.ActionInterface, skipPreRelease bool) (*semver.Version, error) {
 	var index models.Index
 
-	body, err := utils.GetHTTPResponse(url)
+	body, err := utils.GetHTTPResponse(ctx, url)
 	if err != nil {
 		action.Debugf("failed to get HTTP response: %v", err)
 		return nil, err
@@ -96,20 +96,15 @@ func getNewestVersionFromNative(url string, chart string, targetRevision string,
 	return newest, nil
 }
 
-func getNewestVersionFromOCI(url string, chart string, targetRevision string, action internal.ActionInterface, skipPreRelease bool) (*semver.Version, error) {
+func getNewestVersionFromOCI(ctx context.Context, url string, chart string, targetRevision string, action internal.ActionInterface, skipPreRelease bool) (*semver.Version, error) {
 	tags := &models.TagsList{}
 
-	url = strings.TrimSuffix(url, "/")
-	url = strings.TrimPrefix(url, "https://")
-	url = strings.TrimPrefix(url, "http://")
-	url = strings.TrimPrefix(url, "oci://")
-	url = url + "/" + chart
+	url = strings.TrimSuffix(url, "/") + "/" + chart
 	repo, err := remote.NewRepository(url)
 	if err != nil {
 		return nil, err
 	}
 
-	ctx := context.Background()
 	err = repo.Tags(ctx, "", func(tagsResult []string) error {
 		for _, tag := range tagsResult {
 			convertedTag := strings.ReplaceAll(tag, "_", "+")
