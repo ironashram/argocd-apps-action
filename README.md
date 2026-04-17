@@ -42,7 +42,7 @@ jobs:
           fetch-depth: '0'
 
       - name: Check updates for ArgoCD Apps
-        uses: ironashram/argocd-apps-action@v2.0.0
+        uses: ironashram/argocd-apps-action@v2.0.1
         with:
           skip_prerelease: true
           target_branch: main
