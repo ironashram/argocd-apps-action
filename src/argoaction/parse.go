@@ -16,10 +16,10 @@ import (
 )
 
 var (
-	chartRe         = regexp.MustCompile(`(?m)^\s+chart:\s*(\S.*?)\s*$`)
-	repoRe          = regexp.MustCompile(`(?m)^\s+repoURL:\s*(\S.*?)\s*$`)
-	revRe           = regexp.MustCompile(`(?m)^\s+targetRevision:\s*(\S.*?)\s*$`)
-	multiSourceRe   = regexp.MustCompile(`(?m)^\s+sources:\s*$`)
+	chartRe       = regexp.MustCompile(`(?m)^\s+chart:\s*(\S.*?)\s*$`)
+	repoRe        = regexp.MustCompile(`(?m)^\s+repoURL:\s*(\S.*?)\s*$`)
+	revRe         = regexp.MustCompile(`(?m)^\s+targetRevision:\s*(\S.*?)\s*$`)
+	multiSourceRe = regexp.MustCompile(`(?m)^\s+sources:\s*$`)
 )
 
 func readAndParseYAML(osi internal.OSInterface, path string, allowRegexFallback bool, action internal.ActionInterface) (*models.Application, error) {
