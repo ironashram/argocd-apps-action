@@ -39,8 +39,8 @@ func TestMockPullRequestsService_Create(t *testing.T) {
 	mockPullRequestsService := &mocks.MockPullRequestsService{}
 
 	newPR := &github.NewPullRequest{
-		Title: github.String("Test Pull Request"),
-		Body:  github.String("This is a test pull request"),
+		Title: github.Ptr("Test Pull Request"),
+		Body:  github.Ptr("This is a test pull request"),
 	}
 
 	_, _, err := mockPullRequestsService.Create(context.Background(), "owner", "repo", newPR)

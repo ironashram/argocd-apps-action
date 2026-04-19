@@ -91,6 +91,7 @@ func TestNewFromInputs(t *testing.T) {
 			tc.action.On("Debugf", "create_pr: %v", mock.Anything).Once()
 			tc.action.On("Debugf", "apps_folder: %s", mock.Anything).Once()
 			tc.action.On("Debugf", "file_extensions: %v", mock.Anything).Once()
+			tc.action.On("Debugf", "allow_regex_fallback: %v", mock.Anything).Once()
 			config, err := NewFromInputs(tc.action)
 
 			if err != tc.expectedErr {

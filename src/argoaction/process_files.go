@@ -53,7 +53,7 @@ func (u *Updater) collectCandidates(dir string, osw internal.OSInterface) (map[m
 			return nil
 		}
 
-		app, err := readAndParseYAML(osw, p)
+		app, err := readAndParseYAML(osw, p, u.Config.AllowRegexFallback, u.Action)
 		if err != nil {
 			u.Action.Debugf("Error reading and parsing YAML %s: %v", p, err)
 			errs = append(errs, err)

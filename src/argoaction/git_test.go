@@ -33,11 +33,11 @@ func TestCreatePullRequest(t *testing.T) {
 	body := "This is a test pull request"
 
 	expectedPR := &github.NewPullRequest{
-		Title:               github.String(title),
-		Head:                github.String(newBranch),
-		Base:                github.String(baseBranch),
-		Body:                github.String(body),
-		MaintainerCanModify: github.Bool(true),
+		Title:               github.Ptr(title),
+		Head:                github.Ptr(newBranch),
+		Base:                github.Ptr(baseBranch),
+		Body:                github.Ptr(body),
+		MaintainerCanModify: github.Ptr(true),
 	}
 
 	mockClient := &mocks.MockGithubClient{
@@ -95,7 +95,7 @@ func TestCreatePullRequest_Error(t *testing.T) {
 		Head:                github.Ptr(newBranch),
 		Base:                github.Ptr(baseBranch),
 		Body:                github.Ptr(body),
-		MaintainerCanModify: github.Bool(true),
+		MaintainerCanModify: github.Ptr(true),
 	}
 
 	expectedError := errors.New("failed to create pull request")
