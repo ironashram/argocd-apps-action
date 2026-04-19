@@ -28,6 +28,10 @@ inputs:
     description: "if true skips semantic prerelease versions during automated upgrades"
     required: false
     default: "true"
+  allow_regex_fallback:
+    description: "if true, when a manifest fails YAML parse (e.g. contains Helm templating) fall back to regex extraction of chart/repoURL/targetRevision"
+    required: false
+    default: "false"
 runs:
   using: composite
   steps:
@@ -54,5 +58,6 @@ runs:
         INPUT_APPS_FOLDER: ${{ inputs.apps_folder }}
         INPUT_LABELS: ${{ inputs.labels }}
         INPUT_FILE_EXTENSIONS: ${{ inputs.file_extensions }}
+        INPUT_ALLOW_REGEX_FALLBACK: ${{ inputs.allow_regex_fallback }}
       shell: bash
       run: argocd-apps-action

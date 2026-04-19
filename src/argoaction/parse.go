@@ -2,6 +2,7 @@ package argoaction
 
 import (
 	"context"
+	"regexp"
 	"strings"
 
 	"github.com/ironashram/argocd-apps-action/internal"
@@ -14,19 +15,44 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
-func readAndParseYAML(osi internal.OSInterface, path string) (*models.Application, error) {
+var (
+	chartRe         = regexp.MustCompile(`(?m)^\s+chart:\s*(\S.*?)\s*$`)
+	repoRe          = regexp.MustCompile(`(?m)^\s+repoURL:\s*(\S.*?)\s*$`)
+	revRe           = regexp.MustCompile(`(?m)^\s+targetRevision:\s*(\S.*?)\s*$`)
+	multiSourceRe   = regexp.MustCompile(`(?m)^\s+sources:\s*$`)
+)
+
+func readAndParseYAML(osi internal.OSInterface, path string, allowRegexFallback bool, action internal.ActionInterface) (*models.Application, error) {
 	data, err := osi.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
 
 	var app models.Application
-	err = yaml.Unmarshal(data, &app)
-	if err != nil {
+	if err := yaml.Unmarshal(data, &app); err == nil {
+		return &app, nil
+	} else if !allowRegexFallback {
 		return nil, err
 	}
 
-	return &app, nil
+	if multiSourceRe.Match(data) {
+		action.Infof("File %s contains a multi-source spec; regex fallback will only extract the first source", path)
+	}
+	return extractFieldsByRegex(data), nil
+}
+
+func extractFieldsByRegex(data []byte) *models.Application {
+	app := &models.Application{}
+	if m := chartRe.FindSubmatch(data); len(m) == 2 {
+		app.Spec.Source.Chart = strings.Trim(string(m[1]), `"'`)
+	}
+	if m := repoRe.FindSubmatch(data); len(m) == 2 {
+		app.Spec.Source.RepoURL = strings.Trim(string(m[1]), `"'`)
+	}
+	if m := revRe.FindSubmatch(data); len(m) == 2 {
+		app.Spec.Source.TargetRevision = strings.Trim(string(m[1]), `"'`)
+	}
+	return app
 }
 
 func pickNewest(candidates []string, skipPreRelease bool, action internal.ActionInterface) *semver.Version {

@@ -10,6 +10,7 @@ type Config struct {
 	Workspace      string
 	Owner          string
 	Name           string
-	Labels         []string
-	FileExtensions []string
+	Labels             []string
+	FileExtensions     []string
+	AllowRegexFallback bool
 }
