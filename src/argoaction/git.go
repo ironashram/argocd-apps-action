@@ -16,6 +16,7 @@ import (
 	"github.com/go-git/go-git/v6"
 	"github.com/go-git/go-git/v6/config"
 	"github.com/go-git/go-git/v6/plumbing"
+	"github.com/go-git/go-git/v6/plumbing/client"
 	"github.com/go-git/go-git/v6/plumbing/object"
 	"github.com/google/go-github/v77/github"
 )
@@ -91,9 +92,11 @@ func (u *Updater) commitChanges(paths []string, commitMessage string) error {
 
 func (u *Updater) pushChanges(branchName string) error {
 	err := u.GitOps.Push(&git.PushOptions{
-		Auth: &githttp.BasicAuth{
-			Username: "github-actions[bot]",
-			Password: u.Config.Token,
+		ClientOptions: []client.Option{
+			client.WithHTTPAuth(&githttp.BasicAuth{
+				Username: "github-actions[bot]",
+				Password: u.Config.Token,
+			}),
 		},
 		RefSpecs: []config.RefSpec{config.RefSpec("refs/heads/" + branchName + ":refs/heads/" + branchName)},
 	})
