@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"path/filepath"
 	"strings"
 	"time"
@@ -181,7 +182,15 @@ func (u *Updater) handleChartGroup(ctx context.Context, chart string, newest *se
 	if err != nil {
 		u.Action.Debugf("Error checking for existing PR: %v", err)
 	} else if existing != nil {
-		u.Action.Infof("PR #%d already open for %s, skipping", *existing.Number, chart)
+		_, resp, err := u.GitHubClient.PullRequests().UpdateBranch(ctx, u.Config.Owner, u.Config.Name, *existing.Number, nil)
+		switch {
+		case err == nil:
+			u.Action.Infof("PR #%d refreshed against %s", *existing.Number, u.Config.TargetBranch)
+		case resp != nil && resp.StatusCode == http.StatusUnprocessableEntity:
+			u.Action.Infof("PR #%d already up to date with %s", *existing.Number, u.Config.TargetBranch)
+		default:
+			u.Action.Infof("PR #%d refresh failed: %v", *existing.Number, err)
+		}
 		return nil
 	}
 
