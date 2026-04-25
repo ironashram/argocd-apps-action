@@ -23,8 +23,9 @@ func (c *MockGithubClient) Issues() internal.IssuesService {
 }
 
 type MockPullRequestsService struct {
-	CreateFunc func(ctx context.Context, owner string, repo string, newPR *github.NewPullRequest) (*github.PullRequest, *github.Response, error)
-	ListFunc   func(ctx context.Context, owner string, repo string, opts *github.PullRequestListOptions) ([]*github.PullRequest, *github.Response, error)
+	CreateFunc       func(ctx context.Context, owner string, repo string, newPR *github.NewPullRequest) (*github.PullRequest, *github.Response, error)
+	ListFunc         func(ctx context.Context, owner string, repo string, opts *github.PullRequestListOptions) ([]*github.PullRequest, *github.Response, error)
+	UpdateBranchFunc func(ctx context.Context, owner string, repo string, number int, opts *github.PullRequestBranchUpdateOptions) (*github.PullRequestBranchUpdateResponse, *github.Response, error)
 }
 
 func (s *MockPullRequestsService) Create(ctx context.Context, owner string, repo string, newPR *github.NewPullRequest) (*github.PullRequest, *github.Response, error) {
@@ -37,6 +38,13 @@ func (s *MockPullRequestsService) Create(ctx context.Context, owner string, repo
 func (s *MockPullRequestsService) List(ctx context.Context, owner string, repo string, opts *github.PullRequestListOptions) ([]*github.PullRequest, *github.Response, error) {
 	if s.ListFunc != nil {
 		return s.ListFunc(ctx, owner, repo, opts)
+	}
+	return nil, nil, nil
+}
+
+func (s *MockPullRequestsService) UpdateBranch(ctx context.Context, owner string, repo string, number int, opts *github.PullRequestBranchUpdateOptions) (*github.PullRequestBranchUpdateResponse, *github.Response, error) {
+	if s.UpdateBranchFunc != nil {
+		return s.UpdateBranchFunc(ctx, owner, repo, number, opts)
 	}
 	return nil, nil, nil
 }
