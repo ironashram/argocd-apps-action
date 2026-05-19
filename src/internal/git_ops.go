@@ -43,7 +43,7 @@ func (r *GitRepo) Worktree() (WorktreeOperations, error) {
 	if err != nil {
 		return nil, err
 	}
-	root, err := filepath.Abs(worktree.Filesystem.Root())
+	root, err := filepath.Abs(worktree.Filesystem().Root())
 	if err != nil {
 		return nil, err
 	}
