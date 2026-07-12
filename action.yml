@@ -1,5 +1,5 @@
 name: "ArgoCD Apps Action"
-description: "Github Action to update ArgoCD Applications"
+description: "Action to bump Helm chart versions in ArgoCD Applications or Flux HelmReleases, on GitHub or Forgejo/Gitea"
 branding:
   icon: "chevrons-up"
   color: "gray-dark"
@@ -32,6 +32,22 @@ inputs:
     description: "if true, when a manifest fails YAML parse (e.g. contains Helm templating) fall back to regex extraction of chart/repoURL/targetRevision"
     required: false
     default: "false"
+  token:
+    description: "token used to push branches and open pull requests"
+    required: false
+    default: ${{ github.token }}
+  provider:
+    description: "git provider: auto (detect from GITHUB_API_URL), github, or gitea/forgejo/codeberg"
+    required: false
+    default: "auto"
+  preset:
+    description: "manifest layout to scan: argocd (spec.source) or flux (HelmRelease + HelmRepository/OCIRepository)"
+    required: false
+    default: "argocd"
+  sources_file:
+    description: "path (relative to the repo) to a custom extraction config; overrides preset when set"
+    required: false
+    default: ""
 runs:
   using: composite
   steps:
@@ -52,6 +68,7 @@ runs:
 
     - name: Run the ArgoCD Apps Action
       env:
+        GITHUB_TOKEN: ${{ inputs.token }}
         INPUT_SKIP_PRERELEASE: ${{ inputs.skip_prerelease }}
         INPUT_TARGET_BRANCH: ${{ inputs.target_branch }}
         INPUT_CREATE_PR: ${{ inputs.create_pr }}
@@ -59,5 +76,8 @@ runs:
         INPUT_LABELS: ${{ inputs.labels }}
         INPUT_FILE_EXTENSIONS: ${{ inputs.file_extensions }}
         INPUT_ALLOW_REGEX_FALLBACK: ${{ inputs.allow_regex_fallback }}
+        INPUT_PROVIDER: ${{ inputs.provider }}
+        INPUT_PRESET: ${{ inputs.preset }}
+        INPUT_SOURCES_FILE: ${{ inputs.sources_file }}
       shell: bash
       run: argocd-apps-action
