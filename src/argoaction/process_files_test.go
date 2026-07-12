@@ -254,4 +254,3 @@ func TestCollectCandidates_GroupsByChartAndRepo(t *testing.T) {
 	assert.Len(t, candidates[fooKey], 2)
 	assert.Len(t, candidates[barKey], 1)
 }
-

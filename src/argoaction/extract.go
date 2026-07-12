@@ -82,10 +82,10 @@ func SourcesFor(cfg *models.Config, osi internal.OSInterface) (*models.SourcesCo
 }
 
 type parsedFile struct {
-	path    string
-	raw     []byte
-	docs    []map[string]any
-	decErr  error
+	path   string
+	raw    []byte
+	docs   []map[string]any
+	decErr error
 }
 
 func (u *Updater) collectCandidates(dir string, osw internal.OSInterface) (map[models.ChartRef][]models.AppFile, []error) {
