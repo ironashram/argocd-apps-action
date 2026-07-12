@@ -4,7 +4,6 @@ import (
 	"context"
 	"net/http"
 	"os"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -15,7 +14,6 @@ import (
 	"github.com/ironashram/argocd-apps-action/internal/mocks"
 	"github.com/ironashram/argocd-apps-action/models"
 
-	"github.com/Masterminds/semver/v3"
 	"github.com/jarcoal/httpmock"
 )
 
@@ -213,36 +211,3 @@ func TestCollectCandidates_GroupsByChartAndRepo(t *testing.T) {
 	assert.Len(t, candidates[barKey], 1)
 }
 
-func TestUpdateTargetRevision(t *testing.T) {
-	mockAction := &mocks.MockActionInterface{}
-	mockOSInterface := &mocks.MockOS{}
-
-	fileContent := `spec:
-  source:
-    chart: chart1
-    repoURL: https://test.local
-    targetRevision: 0.1.2
-`
-	expectedContent := `spec:
-  source:
-    chart: chart1
-    repoURL: https://test.local
-    targetRevision: 0.2.0
-`
-	mockOSInterface.On("ReadFile", "test.yaml").Return([]byte(fileContent), nil)
-	mockOSInterface.On("WriteFile", "test.yaml", []byte(expectedContent), os.FileMode(0644)).Return(nil)
-
-	newest, _ := semver.NewVersion("0.2.0")
-
-	err := updateTargetRevision(newest, "test.yaml", mockAction, mockOSInterface)
-
-	assert.NoError(t, err)
-	mockOSInterface.AssertExpectations(t)
-
-	writeFileCall := mockOSInterface.Calls[1]
-	assert.Equal(t, "WriteFile", writeFileCall.Method)
-
-	writtenContent := string(writeFileCall.Arguments[1].([]byte))
-	assert.Equal(t, expectedContent, writtenContent)
-	assert.Equal(t, 5, strings.Count(writtenContent, "\n"))
-}

@@ -74,6 +74,11 @@ func NewFromInputs(action internal.ActionInterface) (*models.Config, error) {
 	if provider == "" {
 		provider = "auto"
 	}
+	preset := strings.TrimSpace(action.GetInput("preset"))
+	if preset == "" {
+		preset = "argocd"
+	}
+	sourcesFile := strings.TrimSpace(action.GetInput("sources_file"))
 
 	parts := strings.Split(repo, "/")
 	if len(parts) != 2 {
@@ -91,6 +96,8 @@ func NewFromInputs(action internal.ActionInterface) (*models.Config, error) {
 	action.Debugf("allow_regex_fallback: %v", allowRegexFallback)
 	action.Debugf("api_url: %s", apiURL)
 	action.Debugf("provider: %s", provider)
+	action.Debugf("preset: %s", preset)
+	action.Debugf("sources_file: %s", sourcesFile)
 
 	c := models.Config{
 		SkipPreRelease:     skipPreRelease,
@@ -107,6 +114,8 @@ func NewFromInputs(action internal.ActionInterface) (*models.Config, error) {
 		AllowRegexFallback: allowRegexFallback,
 		ApiURL:             apiURL,
 		Provider:           provider,
+		Preset:             preset,
+		SourcesFile:        sourcesFile,
 	}
 	return &c, nil
 }

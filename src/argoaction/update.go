@@ -13,12 +13,18 @@ type Updater struct {
 	Provider internal.GitProvider
 	Config   *models.Config
 	Action   internal.ActionInterface
+	Sources  *models.SourcesConfig
 }
 
 func StartUpdate(ctx context.Context, cfg *models.Config, action internal.ActionInterface) error {
 	gitOps, err := internal.OpenRepo(cfg.Workspace)
 	if err != nil {
 		return fmt.Errorf("opening repository: %w", err)
+	}
+
+	sources, err := SourcesFor(cfg, &internal.OSWrapper{})
+	if err != nil {
+		return fmt.Errorf("loading sources config: %w", err)
 	}
 
 	provider := internal.NewRestProvider(cfg.ApiURL, cfg.Owner, cfg.Name, cfg.Token, cfg.Provider)
@@ -28,6 +34,7 @@ func StartUpdate(ctx context.Context, cfg *models.Config, action internal.Action
 		Provider: provider,
 		Config:   cfg,
 		Action:   action,
+		Sources:  sources,
 	}
 
 	err = u.CheckForUpdates(ctx)

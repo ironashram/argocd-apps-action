@@ -162,8 +162,8 @@ func (u *Updater) handleChartGroup(ctx context.Context, chart string, newest *se
 
 	paths := make([]string, 0, len(files))
 	for _, f := range files {
-		if err := updateTargetRevision(newest, f.Path, u.Action, osw); err != nil {
-			return fmt.Errorf("updating target revision for %s: %w", f.Path, err)
+		if err := u.updateVersion(f, newest, osw); err != nil {
+			return fmt.Errorf("updating version for %s: %w", f.Path, err)
 		}
 		paths = append(paths, f.Path)
 	}

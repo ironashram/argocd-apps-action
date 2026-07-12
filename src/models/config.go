@@ -15,4 +15,6 @@ type Config struct {
 	AllowRegexFallback bool
 	ApiURL             string
 	Provider           string
+	Preset             string
+	SourcesFile        string
 }

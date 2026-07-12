@@ -28,4 +28,6 @@ type ChartRef struct {
 type AppFile struct {
 	Path           string
 	CurrentVersion string
+	VersionPath    string
+	DocIndex       int
 }

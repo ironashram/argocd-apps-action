@@ -3,10 +3,7 @@ package argoaction
 import (
 	"context"
 	"errors"
-	"io/fs"
 	"path"
-	"path/filepath"
-	"regexp"
 	"slices"
 	"strings"
 
@@ -14,8 +11,6 @@ import (
 	"github.com/ironashram/argocd-apps-action/internal"
 	"github.com/ironashram/argocd-apps-action/models"
 )
-
-var targetRevisionRe = regexp.MustCompile(`(.*targetRevision: ).*`)
 
 func (u *Updater) CheckForUpdates(ctx context.Context) error {
 	dir := path.Join(u.Config.Workspace, u.Config.AppsFolder)
@@ -34,49 +29,6 @@ func (u *Updater) CheckForUpdates(ctx context.Context) error {
 	}
 
 	return errors.Join(errs...)
-}
-
-func (u *Updater) collectCandidates(dir string, osw internal.OSInterface) (map[models.ChartRef][]models.AppFile, []error) {
-	candidates := map[models.ChartRef][]models.AppFile{}
-	var errs []error
-
-	walkErr := filepath.WalkDir(dir, func(p string, d fs.DirEntry, err error) error {
-		if err != nil {
-			u.Action.Debugf("Error walking path: %v", err)
-			errs = append(errs, err)
-			return nil
-		}
-		if d.IsDir() {
-			return nil
-		}
-		if !u.matchesExtension(filepath.Ext(p)) {
-			return nil
-		}
-
-		app, err := readAndParseYAML(osw, p, u.Config.AllowRegexFallback, u.Action)
-		if err != nil {
-			u.Action.Debugf("Error reading and parsing YAML %s: %v", p, err)
-			errs = append(errs, err)
-			return nil
-		}
-
-		chart := app.Spec.Source.Chart
-		url := app.Spec.Source.RepoURL
-		rev := app.Spec.Source.TargetRevision
-		if chart == "" || url == "" || rev == "" {
-			u.Action.Debugf("Skipping invalid application manifest %s", p)
-			return nil
-		}
-
-		key := models.ChartRef{RepoURL: url, Chart: chart}
-		candidates[key] = append(candidates[key], models.AppFile{Path: p, CurrentVersion: rev})
-		return nil
-	})
-	if walkErr != nil {
-		errs = append(errs, walkErr)
-	}
-
-	return candidates, errs
 }
 
 func (u *Updater) processChartGroup(ctx context.Context, key models.ChartRef, files []models.AppFile, osw internal.OSInterface) error {
@@ -131,31 +83,4 @@ func (u *Updater) processChartGroup(ctx context.Context, key models.ChartRef, fi
 
 func (u *Updater) matchesExtension(ext string) bool {
 	return slices.Contains(u.Config.FileExtensions, ext)
-}
-
-func updateTargetRevision(newest *semver.Version, path string, action internal.ActionInterface, osw internal.OSInterface) error {
-	oldData, err := osw.ReadFile(path)
-	if err != nil {
-		action.Debugf("Error reading file: %v", err)
-		return err
-	}
-
-	lines := strings.Split(string(oldData), "\n")
-
-	for i, line := range lines {
-		if strings.Contains(line, "targetRevision:") {
-			lines[i] = targetRevisionRe.ReplaceAllString(line, "${1}"+newest.String())
-			break
-		}
-	}
-
-	newData := strings.Join(lines, "\n")
-
-	err = osw.WriteFile(path, []byte(newData), 0644)
-	if err != nil {
-		action.Debugf("Error writing file: %v", err)
-		return err
-	}
-
-	return nil
 }
