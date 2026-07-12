@@ -6,17 +6,14 @@ import (
 
 	"github.com/ironashram/argocd-apps-action/internal"
 	"github.com/ironashram/argocd-apps-action/models"
-
-	"github.com/google/go-github/v77/github"
-
-	"golang.org/x/oauth2"
 )
 
 type Updater struct {
-	GitOps       internal.GitOperations
-	GitHubClient internal.GitHubClient
-	Config       *models.Config
-	Action       internal.ActionInterface
+	GitOps   internal.GitOperations
+	Provider internal.GitProvider
+	Config   *models.Config
+	Action   internal.ActionInterface
+	Sources  *models.SourcesConfig
 }
 
 func StartUpdate(ctx context.Context, cfg *models.Config, action internal.ActionInterface) error {
@@ -25,19 +22,19 @@ func StartUpdate(ctx context.Context, cfg *models.Config, action internal.Action
 		return fmt.Errorf("opening repository: %w", err)
 	}
 
-	ts := oauth2.StaticTokenSource(
-		&oauth2.Token{AccessToken: cfg.Token},
-	)
-	tc := oauth2.NewClient(ctx, ts)
+	sources, err := SourcesFor(cfg, &internal.OSWrapper{})
+	if err != nil {
+		return fmt.Errorf("loading sources config: %w", err)
+	}
 
-	githubClient := github.NewClient(tc)
-	realClient := &internal.RealGitHubClient{Client: githubClient}
+	provider := internal.NewRestProvider(cfg.ApiURL, cfg.Owner, cfg.Name, cfg.Token, cfg.Provider)
 
 	u := &Updater{
-		GitOps:       gitOps,
-		GitHubClient: realClient,
-		Config:       cfg,
-		Action:       action,
+		GitOps:   gitOps,
+		Provider: provider,
+		Config:   cfg,
+		Action:   action,
+		Sources:  sources,
 	}
 
 	err = u.CheckForUpdates(ctx)

@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net/http"
 	"path/filepath"
 	"strings"
 	"time"
@@ -19,7 +18,6 @@ import (
 	"github.com/go-git/go-git/v6/plumbing"
 	"github.com/go-git/go-git/v6/plumbing/client"
 	"github.com/go-git/go-git/v6/plumbing/object"
-	"github.com/google/go-github/v77/github"
 )
 
 func (u *Updater) createNewBranch(baseBranch, branchName string) error {
@@ -110,69 +108,32 @@ func (u *Updater) pushChanges(branchName string) error {
 	return nil
 }
 
-func (u *Updater) createPullRequest(ctx context.Context, baseBranch string, newBranch string, title string, body string) (*github.PullRequest, error) {
-	newPR := &github.NewPullRequest{
-		Title:               github.Ptr(title),
-		Head:                github.Ptr(newBranch),
-		Base:                github.Ptr(baseBranch),
-		Body:                github.Ptr(body),
-		MaintainerCanModify: github.Ptr(true),
+func (u *Updater) createPullRequest(ctx context.Context, baseBranch string, newBranch string, title string, body string) (*internal.PR, error) {
+	if u.Provider == nil {
+		return nil, errors.New("git provider is nil")
 	}
 
-	if u.GitHubClient == nil {
-		return nil, errors.New("githubClient is nil")
-	}
-
-	pullRequests := u.GitHubClient.PullRequests()
-	if pullRequests == nil {
-		return nil, errors.New("PullRequests is nil")
-	}
-
-	pr, _, err := pullRequests.Create(ctx, u.Config.Owner, u.Config.Name, newPR)
-	if err != nil {
-		return pr, err
-	}
-
-	return pr, nil
-}
-
-func (u *Updater) addLabelsToPullRequest(ctx context.Context, pr *github.PullRequest, labels []string) error {
-	if u.GitHubClient == nil {
-		return errors.New("githubClient is nil")
-	}
-
-	issues := u.GitHubClient.Issues()
-	if issues == nil {
-		return errors.New("issues is nil")
-	}
-
-	_, _, err := issues.AddLabelsToIssue(ctx, u.Config.Owner, u.Config.Name, *pr.Number, labels)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (u *Updater) findExistingPR(ctx context.Context, branchName string) (*github.PullRequest, error) {
-	if u.GitHubClient == nil {
-		return nil, errors.New("githubClient is nil")
-	}
-	pullRequests := u.GitHubClient.PullRequests()
-	if pullRequests == nil {
-		return nil, errors.New("PullRequests is nil")
-	}
-	prs, _, err := pullRequests.List(ctx, u.Config.Owner, u.Config.Name, &github.PullRequestListOptions{
-		State: "open",
-		Head:  u.Config.Owner + ":" + branchName,
+	return u.Provider.CreatePR(ctx, internal.NewPR{
+		Title: title,
+		Head:  newBranch,
+		Base:  baseBranch,
+		Body:  body,
 	})
-	if err != nil {
-		return nil, err
+}
+
+func (u *Updater) addLabelsToPullRequest(ctx context.Context, pr *internal.PR, labels []string) error {
+	if u.Provider == nil {
+		return errors.New("git provider is nil")
 	}
-	if len(prs) == 0 {
-		return nil, nil
+
+	return u.Provider.AddLabels(ctx, pr.Number, labels)
+}
+
+func (u *Updater) findExistingPR(ctx context.Context, branchName string) (*internal.PR, error) {
+	if u.Provider == nil {
+		return nil, errors.New("git provider is nil")
 	}
-	return prs[0], nil
+	return u.Provider.FindOpenPR(ctx, branchName)
 }
 
 func (u *Updater) handleChartGroup(ctx context.Context, chart string, newest *semver.Version, files []models.AppFile, osw internal.OSInterface) error {
@@ -182,14 +143,14 @@ func (u *Updater) handleChartGroup(ctx context.Context, chart string, newest *se
 	if err != nil {
 		u.Action.Debugf("Error checking for existing PR: %v", err)
 	} else if existing != nil {
-		_, resp, err := u.GitHubClient.PullRequests().UpdateBranch(ctx, u.Config.Owner, u.Config.Name, *existing.Number, nil)
+		err := u.Provider.RefreshPR(ctx, existing.Number)
 		switch {
 		case err == nil:
-			u.Action.Infof("PR #%d refreshed against %s", *existing.Number, u.Config.TargetBranch)
-		case resp != nil && resp.StatusCode == http.StatusUnprocessableEntity:
-			u.Action.Infof("PR #%d already up to date with %s", *existing.Number, u.Config.TargetBranch)
+			u.Action.Infof("PR #%d refreshed against %s", existing.Number, u.Config.TargetBranch)
+		case errors.Is(err, internal.ErrPRUpToDate):
+			u.Action.Infof("PR #%d already up to date with %s", existing.Number, u.Config.TargetBranch)
 		default:
-			u.Action.Infof("PR #%d refresh failed: %v", *existing.Number, err)
+			u.Action.Infof("PR #%d refresh failed: %v", existing.Number, err)
 		}
 		return nil
 	}
@@ -201,8 +162,8 @@ func (u *Updater) handleChartGroup(ctx context.Context, chart string, newest *se
 
 	paths := make([]string, 0, len(files))
 	for _, f := range files {
-		if err := updateTargetRevision(newest, f.Path, u.Action, osw); err != nil {
-			return fmt.Errorf("updating target revision for %s: %w", f.Path, err)
+		if err := u.updateVersion(f, newest, osw); err != nil {
+			return fmt.Errorf("updating version for %s: %w", f.Path, err)
 		}
 		paths = append(paths, f.Path)
 	}

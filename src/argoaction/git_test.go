@@ -7,10 +7,10 @@ import (
 	"testing"
 
 	"github.com/go-git/go-git/v6/plumbing"
-	"github.com/google/go-github/v77/github"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
+	"github.com/ironashram/argocd-apps-action/internal"
 	"github.com/ironashram/argocd-apps-action/internal/mocks"
 	"github.com/ironashram/argocd-apps-action/models"
 )
@@ -32,40 +32,25 @@ func TestCreatePullRequest(t *testing.T) {
 	title := "Test Pull Request"
 	body := "This is a test pull request"
 
-	expectedPR := &github.NewPullRequest{
-		Title:               github.Ptr(title),
-		Head:                github.Ptr(newBranch),
-		Base:                github.Ptr(baseBranch),
-		Body:                github.Ptr(body),
-		MaintainerCanModify: github.Ptr(true),
-	}
-
-	mockClient := &mocks.MockGithubClient{
-		PullRequestsService: &mocks.MockPullRequestsService{
-			CreateFunc: func(ctx context.Context, owner string, name string, newPR *github.NewPullRequest) (*github.PullRequest, *github.Response, error) {
-				assert.Equal(t, cfg.Owner, owner)
-				assert.Equal(t, cfg.Name, name)
-				assert.Equal(t, expectedPR, newPR)
-				return nil, nil, nil
+	u := &Updater{
+		Provider: &mocks.MockGitProvider{
+			CreatePRFunc: func(ctx context.Context, p internal.NewPR) (*internal.PR, error) {
+				assert.Equal(t, internal.NewPR{Title: title, Head: newBranch, Base: baseBranch, Body: body}, p)
+				return &internal.PR{Number: 1, HeadRef: newBranch}, nil
 			},
 		},
+		Config: cfg,
+		Action: mockAction,
 	}
 
-	u := &Updater{
-		GitHubClient: mockClient,
-		Config:       cfg,
-		Action:       mockAction,
-	}
-
-	_, err := u.createPullRequest(context.Background(), baseBranch, newBranch, title, body)
+	pr, err := u.createPullRequest(context.Background(), baseBranch, newBranch, title, body)
 	assert.NoError(t, err)
+	assert.Equal(t, 1, pr.Number)
 
 	expectedError := errors.New("failed to create pull request")
-	u.GitHubClient = &mocks.MockGithubClient{
-		PullRequestsService: &mocks.MockPullRequestsService{
-			CreateFunc: func(ctx context.Context, owner string, repo string, newPR *github.NewPullRequest) (*github.PullRequest, *github.Response, error) {
-				return nil, nil, expectedError
-			},
+	u.Provider = &mocks.MockGitProvider{
+		CreatePRFunc: func(ctx context.Context, p internal.NewPR) (*internal.PR, error) {
+			return nil, expectedError
 		},
 	}
 
@@ -90,30 +75,16 @@ func TestCreatePullRequest_Error(t *testing.T) {
 	title := "Test Pull Request"
 	body := "This is a test pull request"
 
-	expectedPR := &github.NewPullRequest{
-		Title:               github.Ptr(title),
-		Head:                github.Ptr(newBranch),
-		Base:                github.Ptr(baseBranch),
-		Body:                github.Ptr(body),
-		MaintainerCanModify: github.Ptr(true),
-	}
-
 	expectedError := errors.New("failed to create pull request")
-	mockClient := &mocks.MockGithubClient{
-		PullRequestsService: &mocks.MockPullRequestsService{
-			CreateFunc: func(ctx context.Context, owner string, name string, newPR *github.NewPullRequest) (*github.PullRequest, *github.Response, error) {
-				assert.Equal(t, cfg.Owner, owner)
-				assert.Equal(t, cfg.Name, name)
-				assert.Equal(t, expectedPR, newPR)
-				return nil, nil, expectedError
+	u := &Updater{
+		Provider: &mocks.MockGitProvider{
+			CreatePRFunc: func(ctx context.Context, p internal.NewPR) (*internal.PR, error) {
+				assert.Equal(t, internal.NewPR{Title: title, Head: newBranch, Base: baseBranch, Body: body}, p)
+				return nil, expectedError
 			},
 		},
-	}
-
-	u := &Updater{
-		GitHubClient: mockClient,
-		Config:       cfg,
-		Action:       mockAction,
+		Config: cfg,
+		Action: mockAction,
 	}
 
 	_, err := u.createPullRequest(context.Background(), baseBranch, newBranch, title, body)

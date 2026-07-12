@@ -10,10 +10,14 @@ import (
 
 var httpClient = &http.Client{Timeout: 30 * time.Second}
 
-func GetHTTPResponse(ctx context.Context, url string) ([]byte, error) {
+func GetHTTPResponse(ctx context.Context, url string, username string, password string) ([]byte, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err
+	}
+
+	if username != "" || password != "" {
+		req.SetBasicAuth(username, password)
 	}
 
 	resp, err := httpClient.Do(req)

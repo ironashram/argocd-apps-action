@@ -2,18 +2,20 @@
 [![go: build binaries](https://github.com/ironashram/argocd-apps-action/actions/workflows/go-binary.yaml/badge.svg)](https://github.com/ironashram/argocd-apps-action/actions/workflows/go-binary.yaml)
 
 ## ArgoCD Apps Action
-This GitHub Action checks for updates in the specified directory of YAML files. It's written in Go and uses the `"sigs.k8s.io/yaml"` package to parse YAML files and the `github.com/sethvargo/go-githubactions` package for GitHub Actions specific functionalities.
+This action bumps Helm chart versions pinned in GitOps manifests and opens a pull request when a newer chart release is available. ArgoCD `Application` and Flux `HelmRelease`/`OCIRepository` manifests are supported out of the box via presets, and any other YAML layout can be described with a custom `sources_file`. Pull requests are opened through the standard REST API shared by GitHub, Gitea, Forgejo, Codeberg and other compatible forges, so the action runs on any of them (auto-detected from the runner environment). It is written in Go and uses `github.com/sethvargo/go-githubactions` for the Actions runtime.
 
 ## How it works
 
-The action walks through the specified directory and its subdirectories, looking for files matching the configured extensions (default: `yaml`, `yml`). For each YAML file, it reads the file and unmarshals the content into an `Application` manifest.
+The action walks the configured directory and its subdirectories, looking for files matching the configured extensions (default: `yaml`, `yml`), and extracts each pinned chart's name, repository URL and current version according to the selected `preset`:
 
-The action then checks if the `chart`, `url`, and `targetRevision` fields are present. If they are, it sends a GET request to the URL (`RepoURL`) and unmarshals the response getting the new chart versions.
+- `argocd` (default): reads `spec.source.{chart,repoURL,targetRevision}` from `Application` manifests.
+- `flux`: reads chart + version from `HelmRelease` (`spec.chart.spec.{chart,version}`), resolving the repository URL from the referenced `HelmRepository` via `sourceRef`; and reads `OCIRepository` charts directly (`spec.url` + `spec.ref.semver`). Repositories with a `secretRef` (private) are skipped unless a matching entry exists in `repo_credentials`.
 
-The action supports both Helm chart repositories and OCI registries. For OCI registries, it uses the `oras.land/oras-go` package to interact with the registry. Please note that currently only public repositories are supported.
+For each chart it fetches the available versions (Helm `index.yaml` for HTTP repos, or the registry tags via `oras.land/oras-go` for OCI repos) and, if a newer version exists, edits the exact version field in place and opens a pull request. Private repositories are supported through the `repo_credentials` input.
 
+Only fixed pins (`X.Y.Z`, optionally `v`-prefixed) are ever bumped. Semver ranges and partial versions (`1.x`, `2.*`, `~1.2.0`, `6.5`) are left untouched - resolving those is the GitOps tool's job. The pull request is created through the git provider's REST API selected by `provider`/`GITHUB_API_URL`, so the same action works on GitHub and Forgejo/Gitea.
 
-The action then checks if there is a new release and opens PR with the updates if there is.
+For layouts not covered by the presets, set `sources_file` to a custom extraction config (see `preset` definitions in `src/argoaction/extract.go` for the schema).
 
 ## Usage
 
@@ -52,6 +54,59 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
+
+### Presets and custom layouts
+
+Two built-in presets cover the common cases:
+
+- `preset: argocd` (default) - ArgoCD `Application` manifests (`spec.source.*`).
+- `preset: flux` - Flux `HelmRelease` + `HelmRepository`/`OCIRepository` manifests.
+
+For any other layout, set `sources_file` to a YAML file in your repo describing where the chart, version and repository live. It overrides `preset` and is run by the same engine. For example, this reproduces the Flux preset:
+
+```yaml
+# .github/chart-sources.yaml
+repositories:            # build a name/namespace -> url index for by-reference repos
+  - files: ["*"]         # basename globs; "*" matches all scanned files
+    namePath: metadata.name
+    namespacePath: metadata.namespace
+    urlPath: spec.url
+    skipIfSet: spec.secretRef   # skip private repos
+charts:
+  - files: ["*"]
+    chartPath: spec.chart.spec.chart
+    versionPath: spec.chart.spec.version      # the field that gets bumped
+    repoRef:                                  # resolve repo url via the index above
+      namePath: spec.chart.spec.sourceRef.name
+      namespacePath: spec.chart.spec.sourceRef.namespace
+  - files: ["*"]                              # OCIRepository: chart is the url basename
+    urlPath: spec.url
+    versionPath: spec.ref.semver
+```
+
+```yaml
+      - uses: ironashram/argocd-apps-action@v3.0.0
+        with:
+          sources_file: .github/chart-sources.yaml
+          apps_folder: clusters
+```
+
+## Inputs
+
+| Input | Default | Description |
+| --- | --- | --- |
+| `target_branch` | `main` | Branch the pull request targets. |
+| `create_pr` | `true` | Open a pull request when updates are found. |
+| `labels` | `github_actions, dependencies` | Labels to add to the pull request (must already exist in the repo). |
+| `apps_folder` | `apps/manifests` | Folder (relative to the repo) to scan. |
+| `file_extensions` | `yaml,yml` | Comma-separated file extensions to scan. |
+| `skip_prerelease` | `true` | Skip semver prerelease versions. |
+| `allow_regex_fallback` | `false` | When a manifest fails YAML parse (e.g. Helm templating), fall back to regex extraction. |
+| `token` | `${{ github.token }}` | Token used to push branches and open pull requests. |
+| `provider` | `auto` | Git provider: `auto`, `github`, or `gitea`/`forgejo`/`codeberg`. |
+| `preset` | `argocd` | Manifest layout: `argocd` or `flux`. |
+| `sources_file` | `""` | Path to a custom extraction config; overrides `preset` when set. |
+| `repo_credentials` | `""` | Credentials for private chart repositories, one per line: `url-prefix\|username\|password`. Longest matching prefix wins. Works for both HTTP repos (basic auth) and OCI registries. |
 
 ## Immutable Releases
 
