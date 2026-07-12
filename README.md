@@ -9,9 +9,11 @@ This action bumps Helm chart versions pinned in GitOps manifests and opens a pul
 The action walks the configured directory and its subdirectories, looking for files matching the configured extensions (default: `yaml`, `yml`), and extracts each pinned chart's name, repository URL and current version according to the selected `preset`:
 
 - `argocd` (default): reads `spec.source.{chart,repoURL,targetRevision}` from `Application` manifests.
-- `flux`: reads chart + version from `HelmRelease` (`spec.chart.spec.{chart,version}`), resolving the repository URL from the referenced `HelmRepository` via `sourceRef`; and reads `OCIRepository` charts directly (`spec.url` + `spec.ref.semver`). Repositories with a `secretRef` (private) are skipped.
+- `flux`: reads chart + version from `HelmRelease` (`spec.chart.spec.{chart,version}`), resolving the repository URL from the referenced `HelmRepository` via `sourceRef`; and reads `OCIRepository` charts directly (`spec.url` + `spec.ref.semver`). Repositories with a `secretRef` (private) are skipped unless a matching entry exists in `repo_credentials`.
 
-For each chart it fetches the available versions (Helm `index.yaml` for HTTP repos, or the registry tags via `oras.land/oras-go` for OCI repos - only public repositories are supported) and, if a newer version exists, edits the exact version field in place and opens a pull request. The pull request is created through the git provider's REST API selected by `provider`/`GITHUB_API_URL`, so the same action works on GitHub and Forgejo/Gitea.
+For each chart it fetches the available versions (Helm `index.yaml` for HTTP repos, or the registry tags via `oras.land/oras-go` for OCI repos) and, if a newer version exists, edits the exact version field in place and opens a pull request. Private repositories are supported through the `repo_credentials` input.
+
+Only fixed pins (`X.Y.Z`, optionally `v`-prefixed) are ever bumped. Semver ranges and partial versions (`1.x`, `2.*`, `~1.2.0`, `6.5`) are left untouched - resolving those is the GitOps tool's job. The pull request is created through the git provider's REST API selected by `provider`/`GITHUB_API_URL`, so the same action works on GitHub and Forgejo/Gitea.
 
 For layouts not covered by the presets, set `sources_file` to a custom extraction config (see `preset` definitions in `src/argoaction/extract.go` for the schema).
 
@@ -104,6 +106,7 @@ charts:
 | `provider` | `auto` | Git provider: `auto`, `github`, or `gitea`/`forgejo`/`codeberg`. |
 | `preset` | `argocd` | Manifest layout: `argocd` or `flux`. |
 | `sources_file` | `""` | Path to a custom extraction config; overrides `preset` when set. |
+| `repo_credentials` | `""` | Credentials for private chart repositories, one per line: `url-prefix\|username\|password`. Longest matching prefix wins. Works for both HTTP repos (basic auth) and OCI registries. |
 
 ## Immutable Releases
 

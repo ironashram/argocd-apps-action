@@ -55,7 +55,7 @@ func TestGetHTTPResponse(t *testing.T) {
 	// Run tests
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			result, err := GetHTTPResponse(context.Background(), tc.url)
+			result, err := GetHTTPResponse(context.Background(), tc.url, "", "")
 			if err != nil {
 				if tc.err == nil || err.Error() != tc.err.Error() {
 					t.Errorf("Expected error: %v, got: %v", tc.err, err)
@@ -66,5 +66,30 @@ func TestGetHTTPResponse(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestGetHTTPResponse_BasicAuth(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		user, pass, ok := r.BasicAuth()
+		if !ok || user != "bot" || pass != "s3cret" {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+		fmt.Fprint(w, "authed")
+	}))
+	defer server.Close()
+
+	result, err := GetHTTPResponse(context.Background(), server.URL, "bot", "s3cret")
+	if err != nil {
+		t.Fatalf("Expected no error, got: %v", err)
+	}
+	if string(result) != "authed" {
+		t.Errorf("Expected result: authed, got: %s", result)
+	}
+
+	_, err = GetHTTPResponse(context.Background(), server.URL, "", "")
+	if err == nil {
+		t.Error("Expected 401 error without credentials")
 	}
 }

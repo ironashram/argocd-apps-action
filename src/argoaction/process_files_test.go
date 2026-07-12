@@ -160,6 +160,50 @@ func TestProcessChartGroup_NoBumpWhenAllAhead(t *testing.T) {
 	mockAction.AssertExpectations(t)
 }
 
+func TestProcessChartGroup_OnlyFixedVersionsBumped(t *testing.T) {
+	mockAction := &mocks.MockActionInterface{Inputs: map[string]string{}}
+	mockOS := &mocks.MockOS{}
+
+	u := &Updater{
+		Config: &models.Config{CreatePr: false},
+		Action: mockAction,
+	}
+
+	httpmock.Activate()
+	defer httpmock.DeactivateAndReset()
+
+	entries := models.Index{
+		Entries: map[string][]struct {
+			Version string `yaml:"version"`
+		}{
+			"chart1": {{Version: "7.0.0"}},
+		},
+	}
+	responder := func(req *http.Request) (*http.Response, error) {
+		data, _ := yaml.Marshal(entries)
+		return httpmock.NewBytesResponse(200, data), nil
+	}
+	httpmock.RegisterResponder("GET", "https://test.local/index.yaml", responder)
+
+	mockAction.On("Debugf", mock.Anything, mock.Anything).Maybe()
+	mockAction.On("Infof", "Skipping %s: current version %q is not a fixed semver version", mock.Anything).Times(3)
+	mockAction.On("Infof", "There is a newer %s version: %s (%d file(s) to update)", mock.Anything).Once()
+	mockAction.On("Infof", "Create PR is disabled, skipping PR creation for %s", mock.Anything).Once()
+
+	key := models.ChartRef{RepoURL: "https://test.local", Chart: "chart1"}
+	files := []models.AppFile{
+		{Path: "range.yaml", CurrentVersion: "0.1.x"},
+		{Path: "partial.yaml", CurrentVersion: "6.5"},
+		{Path: "constraint.yaml", CurrentVersion: "~6.5.0"},
+		{Path: "pinned.yaml", CurrentVersion: "6.5.0"},
+	}
+
+	err := u.processChartGroup(context.Background(), key, files, mockOS)
+
+	assert.NoError(t, err)
+	mockAction.AssertExpectations(t)
+}
+
 func TestCollectCandidates_GroupsByChartAndRepo(t *testing.T) {
 	dir := t.TempDir()
 

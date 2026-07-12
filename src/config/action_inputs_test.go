@@ -102,6 +102,7 @@ func TestNewFromInputs(t *testing.T) {
 			tc.action.On("Debugf", "provider: %s", mock.Anything).Once()
 			tc.action.On("Debugf", "preset: %s", mock.Anything).Once()
 			tc.action.On("Debugf", "sources_file: %s", mock.Anything).Once()
+			tc.action.On("Debugf", "repo_credentials: %d configured", mock.Anything).Once()
 			config, err := NewFromInputs(tc.action)
 
 			if err != tc.expectedErr {

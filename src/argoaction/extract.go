@@ -136,7 +136,7 @@ func (u *Updater) collectCandidates(dir string, osw internal.OSInterface) (map[m
 				if name == "" || url == "" {
 					continue
 				}
-				if r.SkipIfSet != "" && hasPath(doc, r.SkipIfSet) {
+				if r.SkipIfSet != "" && hasPath(doc, r.SkipIfSet) && credFor(u.Config.RepoCreds, url) == nil {
 					continue
 				}
 				ns := ""

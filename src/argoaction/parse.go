@@ -10,9 +10,32 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	"oras.land/oras-go/v2/registry/remote"
+	"oras.land/oras-go/v2/registry/remote/auth"
+	"oras.land/oras-go/v2/registry/remote/retry"
 
 	"sigs.k8s.io/yaml"
 )
+
+func stripScheme(u string) string {
+	for _, p := range []string{"oci://", "https://", "http://"} {
+		u = strings.TrimPrefix(u, p)
+	}
+	return u
+}
+
+func credFor(creds []models.RepoCredential, url string) *models.RepoCredential {
+	target := stripScheme(url)
+	var best *models.RepoCredential
+	bestLen := -1
+	for i, c := range creds {
+		prefix := stripScheme(c.URLPrefix)
+		if strings.HasPrefix(target, prefix) && len(prefix) > bestLen {
+			best = &creds[i]
+			bestLen = len(prefix)
+		}
+	}
+	return best
+}
 
 func pickNewest(candidates []string, skipPreRelease bool, action internal.ActionInterface) *semver.Version {
 	var newest *semver.Version
@@ -32,10 +55,14 @@ func pickNewest(candidates []string, skipPreRelease bool, action internal.Action
 	return newest
 }
 
-func listVersionsFromNative(ctx context.Context, url string, chart string, action internal.ActionInterface) ([]string, error) {
+func listVersionsFromNative(ctx context.Context, url string, chart string, cred *models.RepoCredential, action internal.ActionInterface) ([]string, error) {
 	var index models.Index
 
-	body, err := utils.GetHTTPResponse(ctx, url)
+	username, password := "", ""
+	if cred != nil {
+		username, password = cred.Username, cred.Password
+	}
+	body, err := utils.GetHTTPResponse(ctx, url, username, password)
 	if err != nil {
 		action.Debugf("failed to get HTTP response: %v", err)
 		return nil, err
@@ -65,11 +92,22 @@ func listVersionsFromNative(ctx context.Context, url string, chart string, actio
 	return versions, nil
 }
 
-func listVersionsFromOCI(ctx context.Context, url string, chart string, action internal.ActionInterface) ([]string, error) {
+func listVersionsFromOCI(ctx context.Context, url string, chart string, cred *models.RepoCredential, action internal.ActionInterface) ([]string, error) {
 	url = strings.TrimSuffix(url, "/") + "/" + chart
 	repo, err := remote.NewRepository(url)
 	if err != nil {
 		return nil, err
+	}
+
+	if cred != nil {
+		repo.Client = &auth.Client{
+			Client: retry.DefaultClient,
+			Cache:  auth.NewCache(),
+			Credential: auth.StaticCredential(repo.Reference.Registry, auth.Credential{
+				Username: cred.Username,
+				Password: cred.Password,
+			}),
+		}
 	}
 
 	var versions []string

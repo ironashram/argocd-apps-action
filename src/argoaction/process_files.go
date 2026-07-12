@@ -34,14 +34,15 @@ func (u *Updater) CheckForUpdates(ctx context.Context) error {
 func (u *Updater) processChartGroup(ctx context.Context, key models.ChartRef, files []models.AppFile, osw internal.OSInterface) error {
 	u.Action.Debugf("Checking %s from %s (%d files)", key.Chart, key.RepoURL, len(files))
 
-	versions, err := listVersionsFromNative(ctx, key.RepoURL+"/index.yaml", key.Chart, u.Action)
+	cred := credFor(u.Config.RepoCreds, key.RepoURL)
+	versions, err := listVersionsFromNative(ctx, key.RepoURL+"/index.yaml", key.Chart, cred, u.Action)
 	if err != nil && !strings.Contains(err.Error(), "unsupported protocol scheme") {
 		u.Action.Infof("Error getting versions for %s: %v", key.Chart, err)
 		return nil
 	}
 	if err != nil {
 		u.Action.Debugf("Not a native chart repository, trying OCI for %s", key.Chart)
-		versions, err = listVersionsFromOCI(ctx, key.RepoURL, key.Chart, u.Action)
+		versions, err = listVersionsFromOCI(ctx, key.RepoURL, key.Chart, cred, u.Action)
 		if err != nil {
 			u.Action.Infof("Error getting versions for %s: %v", key.Chart, err)
 			return nil
@@ -56,9 +57,9 @@ func (u *Updater) processChartGroup(ctx context.Context, key models.ChartRef, fi
 
 	var toBump []models.AppFile
 	for _, f := range files {
-		current, err := semver.NewVersion(f.CurrentVersion)
+		current, err := semver.StrictNewVersion(strings.TrimPrefix(f.CurrentVersion, "v"))
 		if err != nil {
-			u.Action.Infof("Skipping %s: non-semver current version %q", f.Path, f.CurrentVersion)
+			u.Action.Infof("Skipping %s: current version %q is not a fixed semver version", f.Path, f.CurrentVersion)
 			continue
 		}
 		if current.LessThan(newest) {

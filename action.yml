@@ -48,6 +48,10 @@ inputs:
     description: "path (relative to the repo) to a custom extraction config; overrides preset when set"
     required: false
     default: ""
+  repo_credentials:
+    description: "credentials for private chart repositories, one per line: url-prefix|username|password"
+    required: false
+    default: ""
 runs:
   using: composite
   steps:
@@ -79,5 +83,6 @@ runs:
         INPUT_PROVIDER: ${{ inputs.provider }}
         INPUT_PRESET: ${{ inputs.preset }}
         INPUT_SOURCES_FILE: ${{ inputs.sources_file }}
+        INPUT_REPO_CREDENTIALS: ${{ inputs.repo_credentials }}
       shell: bash
       run: argocd-apps-action

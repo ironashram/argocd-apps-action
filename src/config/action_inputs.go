@@ -80,6 +80,23 @@ func NewFromInputs(action internal.ActionInterface) (*models.Config, error) {
 	}
 	sourcesFile := strings.TrimSpace(action.GetInput("sources_file"))
 
+	var repoCreds []models.RepoCredential
+	for _, line := range strings.Split(action.GetInput("repo_credentials"), "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		parts := strings.SplitN(line, "|", 3)
+		if len(parts) != 3 || strings.TrimSpace(parts[0]) == "" {
+			return nil, fmt.Errorf("repo_credentials line is invalid, expected url-prefix|username|password: %q", line)
+		}
+		repoCreds = append(repoCreds, models.RepoCredential{
+			URLPrefix: strings.TrimSpace(parts[0]),
+			Username:  strings.TrimSpace(parts[1]),
+			Password:  strings.TrimSpace(parts[2]),
+		})
+	}
+
 	parts := strings.Split(repo, "/")
 	if len(parts) != 2 {
 		return nil, fmt.Errorf("invalid GITHUB_REPOSITORY: %s", repo)
@@ -98,6 +115,7 @@ func NewFromInputs(action internal.ActionInterface) (*models.Config, error) {
 	action.Debugf("provider: %s", provider)
 	action.Debugf("preset: %s", preset)
 	action.Debugf("sources_file: %s", sourcesFile)
+	action.Debugf("repo_credentials: %d configured", len(repoCreds))
 
 	c := models.Config{
 		SkipPreRelease:     skipPreRelease,
@@ -116,6 +134,7 @@ func NewFromInputs(action internal.ActionInterface) (*models.Config, error) {
 		Provider:           provider,
 		Preset:             preset,
 		SourcesFile:        sourcesFile,
+		RepoCreds:          repoCreds,
 	}
 	return &c, nil
 }

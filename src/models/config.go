@@ -1,5 +1,11 @@
 package models
 
+type RepoCredential struct {
+	URLPrefix string
+	Username  string
+	Password  string
+}
+
 type Config struct {
 	SkipPreRelease     bool
 	TargetBranch       string
@@ -17,4 +23,5 @@ type Config struct {
 	Provider           string
 	Preset             string
 	SourcesFile        string
+	RepoCreds          []RepoCredential
 }
