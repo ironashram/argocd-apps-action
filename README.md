@@ -2,7 +2,7 @@
 [![go: build binaries](https://github.com/ironashram/argocd-apps-action/actions/workflows/go-binary.yaml/badge.svg)](https://github.com/ironashram/argocd-apps-action/actions/workflows/go-binary.yaml)
 
 ## ArgoCD Apps Action
-This action bumps Helm chart versions pinned in GitOps manifests and opens a pull request when a newer chart release is available. It works with both ArgoCD `Application` manifests and Flux `HelmRelease`/`OCIRepository` manifests, and against both GitHub and Forgejo/Gitea (auto-detected). It is written in Go and uses `github.com/sethvargo/go-githubactions` for the Actions runtime.
+This action bumps Helm chart versions pinned in GitOps manifests and opens a pull request when a newer chart release is available. ArgoCD `Application` and Flux `HelmRelease`/`OCIRepository` manifests are supported out of the box via presets, and any other YAML layout can be described with a custom `sources_file`. Pull requests are opened through the standard REST API shared by GitHub, Gitea, Forgejo, Codeberg and other compatible forges, so the action runs on any of them (auto-detected from the runner environment). It is written in Go and uses `github.com/sethvargo/go-githubactions` for the Actions runtime.
 
 ## How it works
 

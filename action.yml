@@ -1,5 +1,5 @@
 name: "ArgoCD Apps Action"
-description: "Action to bump Helm chart versions in ArgoCD Applications or Flux HelmReleases, on GitHub or Forgejo/Gitea"
+description: "Action to bump pinned Helm chart versions in GitOps manifests (ArgoCD, Flux, or custom layouts) and open a PR on any GitHub-compatible forge"
 branding:
   icon: "chevrons-up"
   color: "gray-dark"
