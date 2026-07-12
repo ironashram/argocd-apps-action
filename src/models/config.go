@@ -13,4 +13,6 @@ type Config struct {
 	Labels             []string
 	FileExtensions     []string
 	AllowRegexFallback bool
+	ApiURL             string
+	Provider           string
 }

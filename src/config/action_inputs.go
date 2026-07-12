@@ -66,6 +66,15 @@ func NewFromInputs(action internal.ActionInterface) (*models.Config, error) {
 	repo := action.Getenv("GITHUB_REPOSITORY")
 	workspace := action.Getenv("GITHUB_WORKSPACE")
 
+	apiURL := action.Getenv("GITHUB_API_URL")
+	if strings.TrimSpace(apiURL) == "" {
+		apiURL = "https://api.github.com"
+	}
+	provider := strings.TrimSpace(action.GetInput("provider"))
+	if provider == "" {
+		provider = "auto"
+	}
+
 	parts := strings.Split(repo, "/")
 	if len(parts) != 2 {
 		return nil, fmt.Errorf("invalid GITHUB_REPOSITORY: %s", repo)
@@ -80,6 +89,8 @@ func NewFromInputs(action internal.ActionInterface) (*models.Config, error) {
 	action.Debugf("apps_folder: %s", appsFolder)
 	action.Debugf("file_extensions: %v", fileExtensions)
 	action.Debugf("allow_regex_fallback: %v", allowRegexFallback)
+	action.Debugf("api_url: %s", apiURL)
+	action.Debugf("provider: %s", provider)
 
 	c := models.Config{
 		SkipPreRelease:     skipPreRelease,
@@ -94,6 +105,8 @@ func NewFromInputs(action internal.ActionInterface) (*models.Config, error) {
 		Labels:             labels,
 		FileExtensions:     fileExtensions,
 		AllowRegexFallback: allowRegexFallback,
+		ApiURL:             apiURL,
+		Provider:           provider,
 	}
 	return &c, nil
 }

@@ -47,6 +47,8 @@ func TestNewFromInputs(t *testing.T) {
 				Name:           "my-repo",
 				Labels:         []string{"github_actions", "dependencies"},
 				FileExtensions: []string{".yaml", ".yml"},
+				ApiURL:         "https://api.github.com",
+				Provider:       "auto",
 			},
 			expectedErr: nil,
 		},
@@ -79,6 +81,8 @@ func TestNewFromInputs(t *testing.T) {
 				Name:           "another-repo",
 				Labels:         []string{"github_actions", "dependencies"},
 				FileExtensions: []string{".yaml", ".yml"},
+				ApiURL:         "https://api.github.com",
+				Provider:       "auto",
 			},
 			expectedErr: nil,
 		},
@@ -92,6 +96,8 @@ func TestNewFromInputs(t *testing.T) {
 			tc.action.On("Debugf", "apps_folder: %s", mock.Anything).Once()
 			tc.action.On("Debugf", "file_extensions: %v", mock.Anything).Once()
 			tc.action.On("Debugf", "allow_regex_fallback: %v", mock.Anything).Once()
+			tc.action.On("Debugf", "api_url: %s", mock.Anything).Once()
+			tc.action.On("Debugf", "provider: %s", mock.Anything).Once()
 			config, err := NewFromInputs(tc.action)
 
 			if err != tc.expectedErr {
