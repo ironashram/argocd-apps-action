@@ -51,9 +51,12 @@ jobs:
           create_pr: true
           apps_folder: apps/manifests
           file_extensions: yaml,yml
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.MY_PAT }}
 ```
+
+The `token` input defaults to the workflow's `${{ github.token }}`, so it can be omitted. Note that branches pushed and pull requests opened with the default token do not trigger `on: push` / `on: pull_request` workflows (GitHub prevents recursive workflow runs). If you want CI to run on the update PRs, pass a personal access token or a GitHub App token via `token`.
+
+**Migrating from v2:** the token used to be read from the caller's `env: GITHUB_TOKEN`. Since v3 the action sets `GITHUB_TOKEN` internally from the `token` input, which shadows any `env` value passed by the caller. If your workflow passes a PAT via `env: GITHUB_TOKEN`, it is silently ignored on v3 - move it to `with: token:`.
 
 ### Presets and custom layouts
 
