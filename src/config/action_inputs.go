@@ -79,6 +79,7 @@ func NewFromInputs(action internal.ActionInterface) (*models.Config, error) {
 		preset = "argocd"
 	}
 	sourcesFile := strings.TrimSpace(action.GetInput("sources_file"))
+	scope := strings.TrimSpace(action.GetInput("scope"))
 
 	var repoCreds []models.RepoCredential
 	for _, line := range strings.Split(action.GetInput("repo_credentials"), "\n") {
@@ -115,6 +116,7 @@ func NewFromInputs(action internal.ActionInterface) (*models.Config, error) {
 	action.Debugf("provider: %s", provider)
 	action.Debugf("preset: %s", preset)
 	action.Debugf("sources_file: %s", sourcesFile)
+	action.Debugf("scope: %s", scope)
 	action.Debugf("repo_credentials: %d configured", len(repoCreds))
 
 	c := models.Config{
@@ -134,6 +136,7 @@ func NewFromInputs(action internal.ActionInterface) (*models.Config, error) {
 		Provider:           provider,
 		Preset:             preset,
 		SourcesFile:        sourcesFile,
+		Scope:              scope,
 		RepoCreds:          repoCreds,
 	}
 	return &c, nil

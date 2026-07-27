@@ -65,7 +65,11 @@ Two built-in presets cover the common cases:
 - `preset: argocd` (default) - ArgoCD `Application` manifests (`spec.source.*`).
 - `preset: flux` - Flux `HelmRelease` + `HelmRepository`/`OCIRepository` manifests.
 
-For any other layout, set `sources_file` to a YAML file in your repo describing where the chart, version and repository live. It overrides `preset` and is run by the same engine. For example, this reproduces the Flux preset:
+For any other layout, set `sources_file` to a YAML file in your repo describing where the chart, version and repository live. It overrides `preset` and is run by the same engine.
+
+In a `files:` list, a pattern without a `/` matches the basename, and a pattern with one matches the whole path relative to `apps_folder`, where `**` spans any number of directories. So `["*.yaml"]` selects by filename and `["wave*/staging/**"]` selects by location.
+
+For example, this reproduces the Flux preset:
 
 ```yaml
 # .github/chart-sources.yaml
@@ -109,6 +113,7 @@ charts:
 | `provider` | `auto` | Git provider: `auto`, `github`, or `gitea`/`forgejo`/`codeberg`. |
 | `preset` | `argocd` | Manifest layout: `argocd` or `flux`. |
 | `sources_file` | `""` | Path to a custom extraction config; overrides `preset` when set. |
+| `scope` | `""` | Name distinguishing this run from other runs on the same repo. Goes into the branch name, the PR title and the commit message. |
 | `repo_credentials` | `""` | Credentials for private chart repositories, one per line: `url-prefix\|username\|password`. Longest matching prefix wins. Works for both HTTP repos (basic auth) and OCI registries. |
 
 ## Immutable Releases

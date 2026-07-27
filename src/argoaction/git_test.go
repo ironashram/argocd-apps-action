@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/go-git/go-git/v6/plumbing"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -89,6 +90,62 @@ func TestCreatePullRequest_Error(t *testing.T) {
 
 	_, err := u.createPullRequest(context.Background(), baseBranch, newBranch, title, body)
 	assert.EqualError(t, err, expectedError.Error())
+}
+
+func TestHandleChartGroup_Scope(t *testing.T) {
+	run := func(scope, wantBranch, wantSummary string) {
+		gitOps := new(mocks.MockGitRepo)
+		worktree := new(mocks.MockWorktree)
+		osw := new(mocks.MockOS)
+
+		headRef := plumbing.NewHashReference(plumbing.HEAD, plumbing.ZeroHash)
+		gitOps.On("Worktree").Return(worktree, nil)
+		gitOps.On("Head").Return(headRef, nil)
+		gitOps.On("SetReference", mock.Anything, mock.Anything).Return(nil)
+		gitOps.On("Push", mock.Anything).Return(nil)
+		worktree.On("Checkout", mock.Anything).Return(nil)
+		worktree.On("Root").Return("/repo", nil)
+		worktree.On("Add", mock.Anything).Return(plumbing.ZeroHash, nil)
+		worktree.On("Commit", wantSummary, mock.Anything).Return(plumbing.ZeroHash, nil)
+
+		manifest := []byte("spec:\n  chart:\n    spec:\n      version: \"1.0.0\"\n")
+		osw.On("ReadFile", "/repo/app.yaml").Return(manifest, nil)
+		osw.On("WriteFile", "/repo/app.yaml", mock.Anything, mock.Anything).Return(nil)
+
+		mockAction := &mocks.MockActionInterface{Inputs: map[string]string{}}
+		mockAction.On("Debugf", mock.Anything, mock.Anything).Maybe()
+		mockAction.On("Infof", mock.Anything, mock.Anything).Maybe()
+
+		var gotBranch, gotTitle string
+		u := &Updater{
+			GitOps: gitOps,
+			Provider: &mocks.MockGitProvider{
+				FindOpenPRFunc: func(ctx context.Context, headBranch string) (*internal.PR, error) {
+					gotBranch = headBranch
+					return nil, nil
+				},
+				CreatePRFunc: func(ctx context.Context, p internal.NewPR) (*internal.PR, error) {
+					gotTitle = p.Title
+					return &internal.PR{Number: 7, HeadRef: p.Head}, nil
+				},
+				AddLabelsFunc: func(ctx context.Context, number int, labels []string) error { return nil },
+			},
+			Config: &models.Config{TargetBranch: "main", Scope: scope, Workspace: "/repo"},
+			Action: mockAction,
+		}
+
+		files := []models.AppFile{{Path: "/repo/app.yaml", CurrentVersion: "1.0.0", VersionPath: "spec.chart.spec.version"}}
+		err := u.handleChartGroup(context.Background(), "mychart", semver.MustParse("2.0.0"), files, osw)
+
+		assert.NoError(t, err)
+		assert.Equal(t, wantBranch, gotBranch)
+		assert.Equal(t, wantSummary, gotTitle)
+		worktree.AssertExpectations(t)
+	}
+
+	run("", "update-mychart-2.0.0", "chore: bump mychart to version 2.0.0")
+	run("staging", "update-staging-mychart-2.0.0", "chore: bump mychart to version 2.0.0 (staging)")
+	run("production", "update-production-mychart-2.0.0", "chore: bump mychart to version 2.0.0 (production)")
 }
 
 func TestCreateNewBranch(t *testing.T) {

@@ -137,7 +137,13 @@ func (u *Updater) findExistingPR(ctx context.Context, branchName string) (*inter
 }
 
 func (u *Updater) handleChartGroup(ctx context.Context, chart string, newest *semver.Version, files []models.AppFile, osw internal.OSInterface) error {
-	branchName := "update-" + chart + "-" + newest.String()
+	prefix := "update-"
+	summary := "chore: bump " + chart + " to version " + newest.String()
+	if u.Config.Scope != "" {
+		prefix += u.Config.Scope + "-"
+		summary += " (" + u.Config.Scope + ")"
+	}
+	branchName := prefix + chart + "-" + newest.String()
 
 	existing, err := u.findExistingPR(ctx, branchName)
 	if err != nil {
@@ -168,8 +174,7 @@ func (u *Updater) handleChartGroup(ctx context.Context, chart string, newest *se
 		paths = append(paths, f.Path)
 	}
 
-	commitMessage := "chore: bump " + chart + " to version " + newest.String()
-	err = u.commitChanges(paths, commitMessage)
+	err = u.commitChanges(paths, summary)
 	if err != nil {
 		if strings.Contains(err.Error(), "cannot create empty commit: clean working tree") {
 			u.Action.Infof("No changes to commit for %s, branch already up to date", chart)
@@ -187,9 +192,8 @@ func (u *Updater) handleChartGroup(ctx context.Context, chart string, newest *se
 		return fmt.Errorf("pushing changes: %w", err)
 	}
 
-	prTitle := "chore: bump " + chart + " to version " + newest.String()
 	prBody := buildPRBody(chart, newest, files, u.Config.Workspace)
-	pr, err := u.createPullRequest(ctx, u.Config.TargetBranch, branchName, prTitle, prBody)
+	pr, err := u.createPullRequest(ctx, u.Config.TargetBranch, branchName, summary, prBody)
 	if err != nil {
 		return fmt.Errorf("creating pull request: %w", err)
 	}
