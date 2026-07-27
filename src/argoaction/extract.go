@@ -83,6 +83,7 @@ func SourcesFor(cfg *models.Config, osi internal.OSInterface) (*models.SourcesCo
 
 type parsedFile struct {
 	path   string
+	rel    string
 	raw    []byte
 	docs   []map[string]any
 	decErr error
@@ -116,8 +117,12 @@ func (u *Updater) collectCandidates(dir string, osw internal.OSInterface) (map[m
 			errs = append(errs, rerr)
 			return nil
 		}
+		rel, rerr2 := filepath.Rel(dir, p)
+		if rerr2 != nil {
+			rel = filepath.Base(p)
+		}
 		docs, derr := decodeDocs(data)
-		files = append(files, parsedFile{path: p, raw: data, docs: docs, decErr: derr})
+		files = append(files, parsedFile{path: p, rel: rel, raw: data, docs: docs, decErr: derr})
 		return nil
 	})
 	if walkErr != nil {
@@ -127,7 +132,7 @@ func (u *Updater) collectCandidates(dir string, osw internal.OSInterface) (map[m
 	index := map[string]string{}
 	for _, f := range files {
 		for _, r := range sc.Repositories {
-			if !matchFiles(r.Files, f.path) {
+			if !matchFiles(r.Files, f.rel) {
 				continue
 			}
 			for _, doc := range f.docs {
@@ -153,7 +158,7 @@ func (u *Updater) collectCandidates(dir string, osw internal.OSInterface) (map[m
 
 		if f.decErr != nil {
 			for _, c := range sc.Charts {
-				if !matchFiles(c.Files, f.path) || !c.RegexFallback {
+				if !matchFiles(c.Files, f.rel) || !c.RegexFallback {
 					continue
 				}
 				ref, af, ok := regexExtract(f.raw, c, u.Action, f.path)
@@ -171,7 +176,7 @@ func (u *Updater) collectCandidates(dir string, osw internal.OSInterface) (map[m
 
 		for di, doc := range f.docs {
 			for _, c := range sc.Charts {
-				if !matchFiles(c.Files, f.path) {
+				if !matchFiles(c.Files, f.rel) {
 					continue
 				}
 				ref, ver, ok := extractChart(doc, c, index)
@@ -288,20 +293,51 @@ func decodeDocs(data []byte) ([]map[string]any, error) {
 	return docs, nil
 }
 
-func matchFiles(patterns []string, p string) bool {
+// A pattern without a separator matches the basename, one with a separator the
+// whole relative path, where "**" spans any number of segments.
+func matchFiles(patterns []string, rel string) bool {
 	if len(patterns) == 0 {
 		return true
 	}
-	base := filepath.Base(p)
+	rel = filepath.ToSlash(rel)
+	base := path.Base(rel)
 	for _, pat := range patterns {
 		if pat == "*" || pat == "" {
 			return true
 		}
-		if ok, _ := filepath.Match(pat, base); ok {
+		pat = filepath.ToSlash(pat)
+		if !strings.Contains(pat, "/") {
+			if ok, _ := path.Match(pat, base); ok {
+				return true
+			}
+			continue
+		}
+		if matchSegments(strings.Split(pat, "/"), strings.Split(rel, "/")) {
 			return true
 		}
 	}
 	return false
+}
+
+func matchSegments(pat, name []string) bool {
+	if len(pat) == 0 {
+		return len(name) == 0
+	}
+	if pat[0] == "**" {
+		for i := 0; i <= len(name); i++ {
+			if matchSegments(pat[1:], name[i:]) {
+				return true
+			}
+		}
+		return false
+	}
+	if len(name) == 0 {
+		return false
+	}
+	if ok, _ := path.Match(pat[0], name[0]); !ok {
+		return false
+	}
+	return matchSegments(pat[1:], name[1:])
 }
 
 func getPath(m map[string]any, p string) any {

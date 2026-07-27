@@ -63,6 +63,7 @@ func TestNewFromInputs(t *testing.T) {
 					"apps_folder":     "applications",
 					"labels":          "github_actions, dependencies",
 					"file_extensions": "yaml,yml",
+					"scope":           "staging",
 				},
 				Env: map[string]string{
 					"GITHUB_TOKEN":      "xyz789",
@@ -85,6 +86,7 @@ func TestNewFromInputs(t *testing.T) {
 				ApiURL:         "https://api.github.com",
 				Provider:       "auto",
 				Preset:         "argocd",
+				Scope:          "staging",
 			},
 			expectedErr: nil,
 		},
@@ -102,6 +104,7 @@ func TestNewFromInputs(t *testing.T) {
 			tc.action.On("Debugf", "provider: %s", mock.Anything).Once()
 			tc.action.On("Debugf", "preset: %s", mock.Anything).Once()
 			tc.action.On("Debugf", "sources_file: %s", mock.Anything).Once()
+			tc.action.On("Debugf", "scope: %s", mock.Anything).Once()
 			tc.action.On("Debugf", "repo_credentials: %d configured", mock.Anything).Once()
 			config, err := NewFromInputs(tc.action)
 

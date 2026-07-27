@@ -2,6 +2,7 @@ package argoaction
 
 import (
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -105,6 +106,95 @@ spec:
 
 	private := models.ChartRef{RepoURL: "https://example.com/private", Chart: "privatechart"}
 	assert.Empty(t, candidates[private])
+}
+
+func TestMatchFiles(t *testing.T) {
+	cases := []struct {
+		patterns []string
+		rel      string
+		want     bool
+	}{
+		{nil, "wave0/staging/a.yaml", true},
+		{[]string{"*"}, "wave0/staging/a.yaml", true},
+		{[]string{"a.yaml"}, "wave0/staging/a.yaml", true},
+		{[]string{"*.yaml"}, "wave0/staging/a.yaml", true},
+		{[]string{"b.yaml"}, "wave0/staging/a.yaml", false},
+		{[]string{"wave*/staging/**"}, "wave0/staging/a.yaml", true},
+		{[]string{"wave*/staging/**"}, "wave3/staging/grafana/values.yaml", true},
+		{[]string{"wave*/staging/**"}, "wave0/production/a.yaml", false},
+		{[]string{"wave*/production/**"}, "wave0/production/a.yaml", true},
+		{[]string{"**/staging/**"}, "a/b/staging/c/d.yaml", true},
+		{[]string{"wave0/*.yaml"}, "wave0/a.yaml", true},
+		{[]string{"wave0/*.yaml"}, "wave0/sub/a.yaml", false},
+		{[]string{"wave*/production/**", "wave*/staging/**"}, "wave1/staging/a.yaml", true},
+	}
+
+	for _, c := range cases {
+		assert.Equal(t, c.want, matchFiles(c.patterns, c.rel), "%v against %s", c.patterns, c.rel)
+	}
+}
+
+func TestCollectCandidates_ScopedToStaging(t *testing.T) {
+	dir := t.TempDir()
+
+	write := func(name, content string) {
+		full := dir + "/" + name
+		if err := os.MkdirAll(filepath.Dir(full), 0755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(full, []byte(content), 0644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	write("base/sources/metallb.yaml", `apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: metallb
+  namespace: flux-system
+spec:
+  url: https://metallb.github.io/metallb
+`)
+	release := func(version string) string {
+		return `apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: metallb
+  namespace: metallb-system
+spec:
+  chart:
+    spec:
+      chart: metallb
+      version: "` + version + `"
+      sourceRef:
+        kind: HelmRepository
+        name: metallb
+        namespace: flux-system
+`
+	}
+	write("wave0/staging/metallb-values.yaml", release("0.15.2"))
+	write("wave0/production/metallb-values.yaml", release("0.15.1"))
+
+	mockAction := &mocks.MockActionInterface{Inputs: map[string]string{}}
+	mockAction.On("Debugf", mock.Anything, mock.Anything).Maybe()
+
+	sources := fluxPreset()
+	for i := range sources.Charts {
+		sources.Charts[i].Files = []string{"wave*/staging/**"}
+	}
+
+	u := &Updater{
+		Config:  &models.Config{FileExtensions: []string{".yaml"}},
+		Action:  mockAction,
+		Sources: sources,
+	}
+
+	candidates, errs := u.collectCandidates(dir, &internal.OSWrapper{})
+	assert.Empty(t, errs)
+
+	metallb := models.ChartRef{RepoURL: "https://metallb.github.io/metallb", Chart: "metallb"}
+	assert.Len(t, candidates[metallb], 1)
+	assert.Equal(t, "0.15.2", candidates[metallb][0].CurrentVersion)
 }
 
 func TestWriteVersion_NodePrecise(t *testing.T) {

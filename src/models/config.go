@@ -23,5 +23,6 @@ type Config struct {
 	Provider           string
 	Preset             string
 	SourcesFile        string
+	Scope              string
 	RepoCreds          []RepoCredential
 }
