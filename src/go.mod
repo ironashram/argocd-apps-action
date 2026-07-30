@@ -5,7 +5,7 @@ go 1.26.4
 require (
 	github.com/Masterminds/semver/v3 v3.5.0
 	github.com/go-git/go-git/v6 v6.0.0-alpha.5
-	github.com/jarcoal/httpmock v1.4.1
+	github.com/jarcoal/httpmock v1.4.2
 	github.com/sethvargo/go-githubactions v1.4.0
 	github.com/stretchr/testify v1.11.1
 	gopkg.in/yaml.v3 v3.0.1
