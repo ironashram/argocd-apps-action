@@ -2,6 +2,8 @@ package argoaction
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"strings"
 
 	"github.com/ironashram/argocd-apps-action/internal"
@@ -9,6 +11,8 @@ import (
 	"github.com/ironashram/argocd-apps-action/utils"
 
 	"github.com/Masterminds/semver/v3"
+	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	"oras.land/oras-go/v2/content"
 	"oras.land/oras-go/v2/registry/remote"
 	"oras.land/oras-go/v2/registry/remote/auth"
 	"oras.land/oras-go/v2/registry/remote/retry"
@@ -92,6 +96,35 @@ func listVersionsFromNative(ctx context.Context, url string, chart string, cred 
 	return versions, nil
 }
 
+// Index urls may be relative to the repository, which is how Helm resolves them.
+func tarballURL(ctx context.Context, repoURL, chart, version string, cred *models.RepoCredential, action internal.ActionInterface) (string, error) {
+	username, password := "", ""
+	if cred != nil {
+		username, password = cred.Username, cred.Password
+	}
+	body, err := utils.GetHTTPResponse(ctx, strings.TrimSuffix(repoURL, "/")+"/index.yaml", username, password)
+	if err != nil {
+		return "", err
+	}
+
+	var index models.Index
+	if err := yaml.Unmarshal(body, &index); err != nil {
+		return "", err
+	}
+	for _, entry := range index.Entries[chart] {
+		if entry.Version != version || len(entry.URLs) == 0 {
+			continue
+		}
+		u := entry.URLs[0]
+		if strings.Contains(u, "://") {
+			return u, nil
+		}
+		return strings.TrimSuffix(repoURL, "/") + "/" + strings.TrimPrefix(u, "/"), nil
+	}
+	action.Debugf("No tarball url for %s %s", chart, version)
+	return "", nil
+}
+
 func listVersionsFromOCI(ctx context.Context, url string, chart string, cred *models.RepoCredential, action internal.ActionInterface) ([]string, error) {
 	url = strings.TrimSuffix(url, "/") + "/" + chart
 	repo, err := remote.NewRepository(url)
@@ -123,4 +156,60 @@ func listVersionsFromOCI(ctx context.Context, url string, chart string, cred *mo
 	}
 
 	return versions, nil
+}
+
+func ociRepository(url, chart string, cred *models.RepoCredential) (*remote.Repository, error) {
+	repo, err := remote.NewRepository(strings.TrimSuffix(url, "/") + "/" + chart)
+	if err != nil {
+		return nil, err
+	}
+	if cred != nil {
+		repo.Client = &auth.Client{
+			Client: retry.DefaultClient,
+			Cache:  auth.NewCache(),
+			Credential: auth.StaticCredential(repo.Reference.Registry, auth.Credential{
+				Username: cred.Username,
+				Password: cred.Password,
+			}),
+		}
+	}
+	return repo, nil
+}
+
+const helmChartLayer = "application/vnd.cncf.helm.chart.content.v1.tar+gzip"
+
+func pullOCIChart(ctx context.Context, url, chart, version string, cred *models.RepoCredential) ([]byte, error) {
+	repo, err := ociRepository(url, chart, cred)
+	if err != nil {
+		return nil, err
+	}
+
+	descriptor, body, err := repo.FetchReference(ctx, strings.ReplaceAll(version, "+", "_"))
+	if err != nil {
+		return nil, err
+	}
+	defer body.Close()
+
+	raw, err := content.ReadAll(body, descriptor)
+	if err != nil {
+		return nil, err
+	}
+
+	var manifest ocispec.Manifest
+	if err := json.Unmarshal(raw, &manifest); err != nil {
+		return nil, err
+	}
+
+	for _, layer := range manifest.Layers {
+		if layer.MediaType != helmChartLayer {
+			continue
+		}
+		blob, err := repo.Fetch(ctx, layer)
+		if err != nil {
+			return nil, err
+		}
+		defer blob.Close()
+		return content.ReadAll(blob, layer)
+	}
+	return nil, fmt.Errorf("no chart layer in %s %s", chart, version)
 }

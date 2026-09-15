@@ -29,6 +29,7 @@ type NewPR struct {
 type GitProvider interface {
 	ListOpenPRs(ctx context.Context) ([]PR, error)
 	CreatePR(ctx context.Context, p NewPR) (*PR, error)
+	UpdatePR(ctx context.Context, number int, title, body string) error
 	RefreshPR(ctx context.Context, number int) error
 	ClosePR(ctx context.Context, number int, comment string) error
 	DeleteBranch(ctx context.Context, branch string) error
@@ -168,6 +169,19 @@ func (p *RestProvider) listOpenPRPage(ctx context.Context, path string) ([]prPay
 		return nil, err
 	}
 	return prs, nil
+}
+
+func (p *RestProvider) UpdatePR(ctx context.Context, number int, title, body string) error {
+	path := fmt.Sprintf("/repos/%s/%s/pulls/%d", p.Owner, p.Repo, number)
+	resp, err := p.do(ctx, http.MethodPatch, path, map[string]any{"title": title, "body": body})
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return apiError("update pull request", resp)
+	}
+	return nil
 }
 
 func (p *RestProvider) ClosePR(ctx context.Context, number int, comment string) error {

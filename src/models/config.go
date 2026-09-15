@@ -26,4 +26,5 @@ type Config struct {
 	Scope              string
 	RepoCreds          []RepoCredential
 	DeleteBranch       bool
+	CheckImagePins     bool
 }

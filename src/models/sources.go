@@ -14,12 +14,16 @@ type RepoRule struct {
 }
 
 type ChartRule struct {
-	Files         []string `yaml:"files"`
-	ChartPath     string   `yaml:"chartPath"`
-	VersionPath   string   `yaml:"versionPath"`
-	URLPath       string   `yaml:"urlPath"`
-	RepoRef       *RepoRef `yaml:"repoRef"`
-	RegexFallback bool     `yaml:"regexFallback"`
+	Files              []string `yaml:"files"`
+	ChartPath          string   `yaml:"chartPath"`
+	VersionPath        string   `yaml:"versionPath"`
+	URLPath            string   `yaml:"urlPath"`
+	RepoRef            *RepoRef `yaml:"repoRef"`
+	RegexFallback      bool     `yaml:"regexFallback"`
+	ValuesPath         string   `yaml:"valuesPath"`
+	ValuesStringPath   string   `yaml:"valuesStringPath"`
+	ParametersPath     string   `yaml:"parametersPath"`
+	FileParametersPath string   `yaml:"fileParametersPath"`
 }
 
 type SourcesConfig struct {

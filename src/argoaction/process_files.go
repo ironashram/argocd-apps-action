@@ -84,10 +84,13 @@ func (u *Updater) processChartGroup(ctx context.Context, key models.ChartRef, fi
 
 	if !u.Config.CreatePr {
 		u.Action.Infof("Create PR is disabled, skipping PR creation for %s", key.Chart)
+		if scan := u.scanChartPins(ctx, key, newest.String(), toBump); len(scan.Reports) > 0 {
+			u.Action.Infof("%s%s", scan.titleSuffix(), scan.bodySection(key.Chart, newest.String()))
+		}
 		return nil
 	}
 
-	return u.handleChartGroup(ctx, key.Chart, newest, toBump, osw)
+	return u.handleChartGroup(ctx, key, newest, toBump, osw)
 }
 
 func (u *Updater) matchesExtension(ext string) bool {

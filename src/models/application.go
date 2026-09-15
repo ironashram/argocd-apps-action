@@ -14,10 +14,21 @@ type Application struct {
 	Spec Spec `yaml:"spec"`
 }
 
+type IndexEntry struct {
+	Version string   `yaml:"version"`
+	URLs    []string `yaml:"urls"`
+}
+
 type Index struct {
-	Entries map[string][]struct {
-		Version string `yaml:"version"`
-	} `yaml:"entries"`
+	Entries map[string][]IndexEntry `yaml:"entries"`
+}
+
+type Pin struct {
+	Path   string
+	Value  string
+	Digest bool
+	Opaque bool
+	Ref    bool
 }
 
 type ChartRef struct {
@@ -30,4 +41,5 @@ type AppFile struct {
 	CurrentVersion string
 	VersionPath    string
 	DocIndex       int
+	Pins           []Pin
 }
