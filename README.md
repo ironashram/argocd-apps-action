@@ -44,7 +44,7 @@ jobs:
           fetch-depth: '0'
 
       - name: Check updates for ArgoCD Apps
-        uses: ironashram/argocd-apps-action@v3.1.0
+        uses: ironashram/argocd-apps-action@v3.2.0
         with:
           skip_prerelease: true
           target_branch: main
@@ -92,7 +92,7 @@ charts:
 ```
 
 ```yaml
-      - uses: ironashram/argocd-apps-action@v3.1.0
+      - uses: ironashram/argocd-apps-action@v3.2.0
         with:
           sources_file: .github/chart-sources.yaml
           apps_folder: clusters
