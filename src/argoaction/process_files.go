@@ -21,6 +21,14 @@ func (u *Updater) CheckForUpdates(ctx context.Context) error {
 	candidates, walkErrs := u.collectCandidates(dir, osw)
 	errs = append(errs, walkErrs...)
 
+	if u.Config.CreatePr {
+		prs, err := u.Provider.ListOpenPRs(ctx)
+		if err != nil {
+			u.Action.Infof("Could not list open pull requests, existing ones will not be reused: %v", err)
+		}
+		u.openPRs = prs
+	}
+
 	for key, files := range candidates {
 		if err := u.processChartGroup(ctx, key, files, osw); err != nil {
 			u.Action.Debugf("Error processing chart group %s (%s): %v", key.Chart, key.RepoURL, err)

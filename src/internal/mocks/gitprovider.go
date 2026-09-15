@@ -7,19 +7,28 @@ import (
 )
 
 type MockGitProvider struct {
-	FindOpenPRFunc func(ctx context.Context, headBranch string) (*internal.PR, error)
-	CreatePRFunc   func(ctx context.Context, p internal.NewPR) (*internal.PR, error)
-	RefreshPRFunc  func(ctx context.Context, number int) error
-	AddLabelsFunc  func(ctx context.Context, number int, labels []string) error
+	ListOpenPRsFunc  func(ctx context.Context) ([]internal.PR, error)
+	CreatePRFunc     func(ctx context.Context, p internal.NewPR) (*internal.PR, error)
+	RefreshPRFunc    func(ctx context.Context, number int) error
+	ClosePRFunc      func(ctx context.Context, number int, comment string) error
+	DeleteBranchFunc func(ctx context.Context, branch string) error
+	AddLabelsFunc    func(ctx context.Context, number int, labels []string) error
 }
 
 var _ internal.GitProvider = (*MockGitProvider)(nil)
 
-func (m *MockGitProvider) FindOpenPR(ctx context.Context, headBranch string) (*internal.PR, error) {
-	if m.FindOpenPRFunc != nil {
-		return m.FindOpenPRFunc(ctx, headBranch)
+func (m *MockGitProvider) ListOpenPRs(ctx context.Context) ([]internal.PR, error) {
+	if m.ListOpenPRsFunc != nil {
+		return m.ListOpenPRsFunc(ctx)
 	}
 	return nil, nil
+}
+
+func (m *MockGitProvider) ClosePR(ctx context.Context, number int, comment string) error {
+	if m.ClosePRFunc != nil {
+		return m.ClosePRFunc(ctx, number, comment)
+	}
+	return nil
 }
 
 func (m *MockGitProvider) CreatePR(ctx context.Context, p internal.NewPR) (*internal.PR, error) {
@@ -32,6 +41,13 @@ func (m *MockGitProvider) CreatePR(ctx context.Context, p internal.NewPR) (*inte
 func (m *MockGitProvider) RefreshPR(ctx context.Context, number int) error {
 	if m.RefreshPRFunc != nil {
 		return m.RefreshPRFunc(ctx, number)
+	}
+	return nil
+}
+
+func (m *MockGitProvider) DeleteBranch(ctx context.Context, branch string) error {
+	if m.DeleteBranchFunc != nil {
+		return m.DeleteBranchFunc(ctx, branch)
 	}
 	return nil
 }

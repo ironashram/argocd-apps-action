@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/url"
 	"strings"
 )
 
@@ -17,6 +16,7 @@ var ErrPRUpToDate = errors.New("pull request already up to date")
 type PR struct {
 	Number  int
 	HeadRef string
+	Title   string
 }
 
 type NewPR struct {
@@ -27,9 +27,11 @@ type NewPR struct {
 }
 
 type GitProvider interface {
-	FindOpenPR(ctx context.Context, headBranch string) (*PR, error)
+	ListOpenPRs(ctx context.Context) ([]PR, error)
 	CreatePR(ctx context.Context, p NewPR) (*PR, error)
 	RefreshPR(ctx context.Context, number int) error
+	ClosePR(ctx context.Context, number int, comment string) error
+	DeleteBranch(ctx context.Context, branch string) error
 	AddLabels(ctx context.Context, number int, labels []string) error
 }
 
@@ -111,15 +113,48 @@ func apiError(action string, resp *http.Response) error {
 }
 
 type prPayload struct {
-	Number int `json:"number"`
+	Number int    `json:"number"`
+	Title  string `json:"title"`
 	Head   struct {
-		Ref string `json:"ref"`
+		Ref  string `json:"ref"`
+		Repo struct {
+			FullName string `json:"full_name"`
+		} `json:"repo"`
 	} `json:"head"`
 }
 
-func (p *RestProvider) FindOpenPR(ctx context.Context, headBranch string) (*PR, error) {
-	path := fmt.Sprintf("/repos/%s/%s/pulls?state=open&limit=50&per_page=50&head=%s",
-		p.Owner, p.Repo, url.QueryEscape(p.Owner+":"+headBranch))
+const (
+	prPageSize = 50
+	prMaxPages = 20
+)
+
+// Gitea and Forgejo accept no head filter on this endpoint and ignore the
+// parameter, so the caller matches branches itself. One listing per run serves
+// every chart, which is why this is not scoped to a single branch.
+func (p *RestProvider) ListOpenPRs(ctx context.Context) ([]PR, error) {
+	repo := p.Owner + "/" + p.Repo
+	var out []PR
+	for page := 1; page <= prMaxPages; page++ {
+		path := fmt.Sprintf("/repos/%s/%s/pulls?state=open&page=%d&limit=%d&per_page=%d",
+			p.Owner, p.Repo, page, prPageSize, prPageSize)
+		prs, err := p.listOpenPRPage(ctx, path)
+		if err != nil {
+			return nil, err
+		}
+		for _, pr := range prs {
+			if full := pr.Head.Repo.FullName; full != "" && !strings.EqualFold(full, repo) {
+				continue
+			}
+			out = append(out, PR{Number: pr.Number, HeadRef: pr.Head.Ref, Title: pr.Title})
+		}
+		if len(prs) < prPageSize {
+			break
+		}
+	}
+	return out, nil
+}
+
+func (p *RestProvider) listOpenPRPage(ctx context.Context, path string) ([]prPayload, error) {
 	resp, err := p.do(ctx, http.MethodGet, path, nil)
 	if err != nil {
 		return nil, err
@@ -132,12 +167,32 @@ func (p *RestProvider) FindOpenPR(ctx context.Context, headBranch string) (*PR, 
 	if err := json.NewDecoder(resp.Body).Decode(&prs); err != nil {
 		return nil, err
 	}
-	for _, pr := range prs {
-		if pr.Head.Ref == headBranch {
-			return &PR{Number: pr.Number, HeadRef: pr.Head.Ref}, nil
+	return prs, nil
+}
+
+func (p *RestProvider) ClosePR(ctx context.Context, number int, comment string) error {
+	if comment != "" {
+		path := fmt.Sprintf("/repos/%s/%s/issues/%d/comments", p.Owner, p.Repo, number)
+		resp, err := p.do(ctx, http.MethodPost, path, map[string]any{"body": comment})
+		if err != nil {
+			return err
+		}
+		resp.Body.Close()
+		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+			return apiError("comment on pull request", resp)
 		}
 	}
-	return nil, nil
+
+	path := fmt.Sprintf("/repos/%s/%s/pulls/%d", p.Owner, p.Repo, number)
+	resp, err := p.do(ctx, http.MethodPatch, path, map[string]any{"state": "closed"})
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return apiError("close pull request", resp)
+	}
+	return nil
 }
 
 func (p *RestProvider) CreatePR(ctx context.Context, np NewPR) (*PR, error) {
@@ -177,6 +232,25 @@ func (p *RestProvider) RefreshPR(ctx context.Context, number int) error {
 		return ErrPRUpToDate
 	default:
 		return apiError("refresh pull request", resp)
+	}
+}
+
+// A branch that is already gone is not an error: the point of the call is that
+// it no longer exists afterwards.
+func (p *RestProvider) DeleteBranch(ctx context.Context, branch string) error {
+	path := fmt.Sprintf("/repos/%s/%s/git/refs/heads/%s", p.Owner, p.Repo, branch)
+	resp, err := p.do(ctx, http.MethodDelete, path, nil)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	switch {
+	case resp.StatusCode >= 200 && resp.StatusCode < 300:
+		return nil
+	case resp.StatusCode == http.StatusNotFound:
+		return nil
+	default:
+		return apiError("delete branch", resp)
 	}
 }
 

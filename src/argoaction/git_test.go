@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
+	"slices"
 	"testing"
 
 	"github.com/Masterminds/semver/v3"
@@ -120,12 +122,8 @@ func TestHandleChartGroup_Scope(t *testing.T) {
 		u := &Updater{
 			GitOps: gitOps,
 			Provider: &mocks.MockGitProvider{
-				FindOpenPRFunc: func(ctx context.Context, headBranch string) (*internal.PR, error) {
-					gotBranch = headBranch
-					return nil, nil
-				},
 				CreatePRFunc: func(ctx context.Context, p internal.NewPR) (*internal.PR, error) {
-					gotTitle = p.Title
+					gotBranch, gotTitle = p.Head, p.Title
 					return &internal.PR{Number: 7, HeadRef: p.Head}, nil
 				},
 				AddLabelsFunc: func(ctx context.Context, number int, labels []string) error { return nil },
@@ -146,6 +144,115 @@ func TestHandleChartGroup_Scope(t *testing.T) {
 	run("", "update-mychart-2.0.0", "chore: bump mychart to version 2.0.0")
 	run("staging", "update-staging-mychart-2.0.0", "chore: bump mychart to version 2.0.0 (staging)")
 	run("production", "update-production-mychart-2.0.0", "chore: bump mychart to version 2.0.0 (production)")
+}
+
+func TestHandleChartGroup_DeletesSupersededBranchesOnlyWhenEnabled(t *testing.T) {
+	run := func(deleteBranch bool) []string {
+		gitOps := new(mocks.MockGitRepo)
+		worktree := new(mocks.MockWorktree)
+		osw := new(mocks.MockOS)
+
+		headRef := plumbing.NewHashReference(plumbing.HEAD, plumbing.ZeroHash)
+		gitOps.On("Worktree").Return(worktree, nil)
+		gitOps.On("Head").Return(headRef, nil)
+		gitOps.On("SetReference", mock.Anything, mock.Anything).Return(nil)
+		gitOps.On("Push", mock.Anything).Return(nil)
+		worktree.On("Checkout", mock.Anything).Return(nil)
+		worktree.On("Root").Return("/repo", nil)
+		worktree.On("Add", mock.Anything).Return(plumbing.ZeroHash, nil)
+		worktree.On("Commit", mock.Anything, mock.Anything).Return(plumbing.ZeroHash, nil)
+
+		manifest := []byte("spec:\n  chart:\n    spec:\n      version: \"1.0.0\"\n")
+		osw.On("ReadFile", "/repo/app.yaml").Return(manifest, nil)
+		osw.On("WriteFile", "/repo/app.yaml", mock.Anything, mock.Anything).Return(nil)
+
+		mockAction := &mocks.MockActionInterface{Inputs: map[string]string{}}
+		mockAction.On("Debugf", mock.Anything, mock.Anything).Maybe()
+		mockAction.On("Infof", mock.Anything, mock.Anything).Maybe()
+
+		var deleted []string
+		u := &Updater{
+			GitOps: gitOps,
+			Provider: &mocks.MockGitProvider{
+				CreatePRFunc: func(ctx context.Context, p internal.NewPR) (*internal.PR, error) {
+					return &internal.PR{Number: 50, HeadRef: p.Head}, nil
+				},
+				DeleteBranchFunc: func(ctx context.Context, branch string) error {
+					deleted = append(deleted, branch)
+					return nil
+				},
+			},
+			Config: &models.Config{TargetBranch: "main", Workspace: "/repo", DeleteBranch: deleteBranch},
+			Action: mockAction,
+			openPRs: []internal.PR{
+				{Number: 41, HeadRef: "update-netbox-8.3.62"},
+				{Number: 44, HeadRef: "update-netbox-operator-8.3.62"},
+			},
+		}
+
+		files := []models.AppFile{{Path: "/repo/app.yaml", CurrentVersion: "1.0.0", VersionPath: "spec.chart.spec.version"}}
+		err := u.handleChartGroup(context.Background(), "netbox", semver.MustParse("8.3.63"), files, osw)
+		assert.NoError(t, err)
+		return deleted
+	}
+
+	assert.Empty(t, run(false))
+	assert.Equal(t, []string{"update-netbox-8.3.62"}, run(true))
+}
+
+func TestHandleChartGroup_ClosesSupersededPRs(t *testing.T) {
+	gitOps := new(mocks.MockGitRepo)
+	worktree := new(mocks.MockWorktree)
+	osw := new(mocks.MockOS)
+
+	headRef := plumbing.NewHashReference(plumbing.HEAD, plumbing.ZeroHash)
+	gitOps.On("Worktree").Return(worktree, nil)
+	gitOps.On("Head").Return(headRef, nil)
+	gitOps.On("SetReference", mock.Anything, mock.Anything).Return(nil)
+	gitOps.On("Push", mock.Anything).Return(nil)
+	worktree.On("Checkout", mock.Anything).Return(nil)
+	worktree.On("Root").Return("/repo", nil)
+	worktree.On("Add", mock.Anything).Return(plumbing.ZeroHash, nil)
+	worktree.On("Commit", mock.Anything, mock.Anything).Return(plumbing.ZeroHash, nil)
+
+	manifest := []byte("spec:\n  chart:\n    spec:\n      version: \"1.0.0\"\n")
+	osw.On("ReadFile", "/repo/app.yaml").Return(manifest, nil)
+	osw.On("WriteFile", "/repo/app.yaml", mock.Anything, mock.Anything).Return(nil)
+
+	mockAction := &mocks.MockActionInterface{Inputs: map[string]string{}}
+	mockAction.On("Debugf", mock.Anything, mock.Anything).Maybe()
+	mockAction.On("Infof", mock.Anything, mock.Anything).Maybe()
+
+	closed := map[int]string{}
+	u := &Updater{
+		GitOps: gitOps,
+		Provider: &mocks.MockGitProvider{
+			CreatePRFunc: func(ctx context.Context, p internal.NewPR) (*internal.PR, error) {
+				return &internal.PR{Number: 50, HeadRef: p.Head}, nil
+			},
+			ClosePRFunc: func(ctx context.Context, number int, comment string) error {
+				closed[number] = comment
+				return nil
+			},
+		},
+		Config: &models.Config{TargetBranch: "main", Scope: "staging", Workspace: "/repo"},
+		Action: mockAction,
+		openPRs: []internal.PR{
+			{Number: 41, HeadRef: "update-staging-netbox-8.3.62"},
+			{Number: 42, HeadRef: "update-staging-netbox-8.3.60"},
+			{Number: 43, HeadRef: "update-production-netbox-8.3.62"},
+			{Number: 44, HeadRef: "update-staging-netbox-operator-8.3.62"},
+			{Number: 45, HeadRef: "update-staging-netbox-9.0.0"},
+			{Number: 46, HeadRef: "feature/netbox-rework"},
+		},
+	}
+
+	files := []models.AppFile{{Path: "/repo/app.yaml", CurrentVersion: "1.0.0", VersionPath: "spec.chart.spec.version"}}
+	err := u.handleChartGroup(context.Background(), "netbox", semver.MustParse("8.3.63"), files, osw)
+	assert.NoError(t, err)
+
+	assert.Equal(t, []int{41, 42}, slices.Sorted(maps.Keys(closed)))
+	assert.Contains(t, closed[41], "Superseded by #50")
 }
 
 func TestCreateNewBranch(t *testing.T) {

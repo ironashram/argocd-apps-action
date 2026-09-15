@@ -129,11 +129,56 @@ func (u *Updater) addLabelsToPullRequest(ctx context.Context, pr *internal.PR, l
 	return u.Provider.AddLabels(ctx, pr.Number, labels)
 }
 
-func (u *Updater) findExistingPR(ctx context.Context, branchName string) (*internal.PR, error) {
-	if u.Provider == nil {
-		return nil, errors.New("git provider is nil")
+func (u *Updater) findExistingPR(branchName string) *internal.PR {
+	for i := range u.openPRs {
+		if u.openPRs[i].HeadRef == branchName {
+			return &u.openPRs[i]
+		}
 	}
-	return u.Provider.FindOpenPR(ctx, branchName)
+	return nil
+}
+
+// Branches this action owns are "<prefix><chart>-<version>", so a candidate is
+// one of ours only when the remainder after the chart name parses as a version.
+// Without that check the prefix of "prometheus" also matches a branch opened for
+// "prometheus-operator".
+func supersededVersion(headRef, prefix, chart string, newest *semver.Version) *semver.Version {
+	rest, found := strings.CutPrefix(headRef, prefix+chart+"-")
+	if !found {
+		return nil
+	}
+	v, err := semver.NewVersion(rest)
+	if err != nil || !v.LessThan(newest) {
+		return nil
+	}
+	return v
+}
+
+func (u *Updater) closeSupersededPRs(ctx context.Context, prefix, chart string, newest *semver.Version, keep int) {
+	for _, pr := range u.openPRs {
+		if pr.Number == keep {
+			continue
+		}
+		old := supersededVersion(pr.HeadRef, prefix, chart, newest)
+		if old == nil {
+			continue
+		}
+		comment := fmt.Sprintf("Superseded by #%d, which bumps %s to %s.", keep, chart, newest)
+		if err := u.Provider.ClosePR(ctx, pr.Number, comment); err != nil {
+			u.Action.Infof("PR #%d could not be closed: %v", pr.Number, err)
+			continue
+		}
+		u.Action.Infof("PR #%d (%s %s) closed, superseded by #%d", pr.Number, chart, old, keep)
+
+		if !u.Config.DeleteBranch {
+			continue
+		}
+		if err := u.Provider.DeleteBranch(ctx, pr.HeadRef); err != nil {
+			u.Action.Infof("Branch %s could not be deleted: %v", pr.HeadRef, err)
+			continue
+		}
+		u.Action.Infof("Branch %s deleted", pr.HeadRef)
+	}
 }
 
 func (u *Updater) handleChartGroup(ctx context.Context, chart string, newest *semver.Version, files []models.AppFile, osw internal.OSInterface) error {
@@ -145,10 +190,7 @@ func (u *Updater) handleChartGroup(ctx context.Context, chart string, newest *se
 	}
 	branchName := prefix + chart + "-" + newest.String()
 
-	existing, err := u.findExistingPR(ctx, branchName)
-	if err != nil {
-		u.Action.Debugf("Error checking for existing PR: %v", err)
-	} else if existing != nil {
+	if existing := u.findExistingPR(branchName); existing != nil {
 		err := u.Provider.RefreshPR(ctx, existing.Number)
 		switch {
 		case err == nil:
@@ -158,10 +200,11 @@ func (u *Updater) handleChartGroup(ctx context.Context, chart string, newest *se
 		default:
 			u.Action.Infof("PR #%d refresh failed: %v", existing.Number, err)
 		}
+		u.closeSupersededPRs(ctx, prefix, chart, newest, existing.Number)
 		return nil
 	}
 
-	err = u.createNewBranch(u.Config.TargetBranch, branchName)
+	err := u.createNewBranch(u.Config.TargetBranch, branchName)
 	if err != nil {
 		return fmt.Errorf("creating new branch: %w", err)
 	}
@@ -205,6 +248,7 @@ func (u *Updater) handleChartGroup(ctx context.Context, chart string, newest *se
 	}
 
 	u.Action.Infof("Pull request created for %s (%d file(s))", chart, len(files))
+	u.closeSupersededPRs(ctx, prefix, chart, newest, pr.Number)
 	return nil
 }
 

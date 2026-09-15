@@ -115,6 +115,13 @@ charts:
 | `sources_file` | `""` | Path to a custom extraction config; overrides `preset` when set. |
 | `scope` | `""` | Name distinguishing this run from other runs on the same repo. Goes into the branch name, the PR title and the commit message. |
 | `repo_credentials` | `""` | Credentials for private chart repositories, one per line: `url-prefix\|username\|password`. Longest matching prefix wins. Works for both HTTP repos (basic auth) and OCI registries. |
+| `delete_superseded_branches` | `false` | Delete the branch of a pull request that was closed as superseded by a newer bump. |
+
+## Superseded Pull Requests
+
+Each run lists the open pull requests once, then for every chart it keeps the one matching the version it is proposing and closes the older ones, commenting with the number that replaces them. A pull request is only ever considered for closing when its branch is `update-[<scope>-]<chart>-<version>` and that trailing version parses as semver and is older than the version being proposed, so a branch for `prometheus-operator` is never mistaken for one for `prometheus`, and a pull request that is ahead is left alone.
+
+Branches of closed pull requests are kept by default. A surviving branch is what stops the same bump from being proposed again after you close it, since the push then fails as a non-fast-forward. Set `delete_superseded_branches` to `true` if you would rather keep the branch list clean.
 
 ## Immutable Releases
 
