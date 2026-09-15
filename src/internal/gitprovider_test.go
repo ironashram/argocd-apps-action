@@ -201,18 +201,23 @@ func TestRefreshPR_ForgejoConflict(t *testing.T) {
 }
 
 func TestDeleteBranch(t *testing.T) {
-	var gotMethod, gotPath string
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		gotMethod, gotPath = r.Method, r.URL.Path
-		w.WriteHeader(http.StatusNoContent)
-	}))
-	defer server.Close()
+	for hint, wantPath := range map[string]string{
+		"github":  "/repos/owner/repo/git/refs/heads/update-netbox-8.3.62",
+		"forgejo": "/repos/owner/repo/branches/update-netbox-8.3.62",
+	} {
+		var gotMethod, gotPath string
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			gotMethod, gotPath = r.Method, r.URL.Path
+			w.WriteHeader(http.StatusNoContent)
+		}))
 
-	p := newTestProvider(server, "forgejo")
-	err := p.DeleteBranch(context.Background(), "update-netbox-8.3.62")
-	assert.NoError(t, err)
-	assert.Equal(t, http.MethodDelete, gotMethod)
-	assert.Equal(t, "/repos/owner/repo/git/refs/heads/update-netbox-8.3.62", gotPath)
+		p := newTestProvider(server, hint)
+		err := p.DeleteBranch(context.Background(), "update-netbox-8.3.62")
+		assert.NoError(t, err)
+		assert.Equal(t, http.MethodDelete, gotMethod)
+		assert.Equal(t, wantPath, gotPath, hint)
+		server.Close()
+	}
 }
 
 func TestDeleteBranch_MissingIsNotAnError(t *testing.T) {

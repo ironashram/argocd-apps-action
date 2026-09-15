@@ -243,8 +243,7 @@ func (u *Updater) handleChartGroup(ctx context.Context, key models.ChartRef, new
 		return fmt.Errorf("pushing changes: %w", err)
 	}
 
-	prBody := buildPRBody(chart, newest, files, u.Config.Workspace)
-	pr, err := u.createPullRequest(ctx, u.Config.TargetBranch, branchName, summary, prBody)
+	pr, err := u.createPullRequest(ctx, u.Config.TargetBranch, branchName, summary, body)
 	if err != nil {
 		return fmt.Errorf("creating pull request: %w", err)
 	}

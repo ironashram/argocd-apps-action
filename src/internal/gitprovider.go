@@ -39,11 +39,13 @@ type GitProvider interface {
 type RefreshStyle struct {
 	Method     string
 	PathSuffix string
+	// Forgejo and Gitea expose no delete on git refs, only on branches.
+	BranchPath string
 }
 
 var (
-	RefreshGitHub = RefreshStyle{Method: http.MethodPut, PathSuffix: "/update-branch"}
-	RefreshGitea  = RefreshStyle{Method: http.MethodPost, PathSuffix: "/update"}
+	RefreshGitHub = RefreshStyle{Method: http.MethodPut, PathSuffix: "/update-branch", BranchPath: "/git/refs/heads/"}
+	RefreshGitea  = RefreshStyle{Method: http.MethodPost, PathSuffix: "/update", BranchPath: "/branches/"}
 )
 
 func ResolveRefreshStyle(hint, apiURL string) RefreshStyle {
@@ -252,7 +254,7 @@ func (p *RestProvider) RefreshPR(ctx context.Context, number int) error {
 // A branch that is already gone is not an error: the point of the call is that
 // it no longer exists afterwards.
 func (p *RestProvider) DeleteBranch(ctx context.Context, branch string) error {
-	path := fmt.Sprintf("/repos/%s/%s/git/refs/heads/%s", p.Owner, p.Repo, branch)
+	path := fmt.Sprintf("/repos/%s/%s%s%s", p.Owner, p.Repo, p.Refresh.BranchPath, branch)
 	resp, err := p.do(ctx, http.MethodDelete, path, nil)
 	if err != nil {
 		return err

@@ -283,6 +283,62 @@ func TestHandleChartGroup_RefreshRewritesTitleAndBody(t *testing.T) {
 	assert.Contains(t, gotBody, "8.3.62")
 }
 
+func TestHandleChartGroup_CreatedBodyCarriesThePinSection(t *testing.T) {
+	gitOps := new(mocks.MockGitRepo)
+	worktree := new(mocks.MockWorktree)
+	osw := new(mocks.MockOS)
+
+	headRef := plumbing.NewHashReference(plumbing.HEAD, plumbing.ZeroHash)
+	gitOps.On("Worktree").Return(worktree, nil)
+	gitOps.On("Head").Return(headRef, nil)
+	gitOps.On("SetReference", mock.Anything, mock.Anything).Return(nil)
+	gitOps.On("Push", mock.Anything).Return(nil)
+	worktree.On("Checkout", mock.Anything).Return(nil)
+	worktree.On("Root").Return("/repo", nil)
+	worktree.On("Add", mock.Anything).Return(plumbing.ZeroHash, nil)
+	worktree.On("Commit", mock.Anything, mock.Anything).Return(plumbing.ZeroHash, nil)
+
+	manifest := []byte("spec:\n  chart:\n    spec:\n      version: \"1.0.0\"\n")
+	osw.On("ReadFile", "/repo/app.yaml").Return(manifest, nil)
+	osw.On("WriteFile", "/repo/app.yaml", mock.Anything, mock.Anything).Return(nil)
+
+	mockAction := &mocks.MockActionInterface{Inputs: map[string]string{}}
+	mockAction.On("Debugf", mock.Anything, mock.Anything).Maybe()
+	mockAction.On("Infof", mock.Anything, mock.Anything).Maybe()
+
+	key := models.ChartRef{RepoURL: "https://charts.example.com", Chart: "app"}
+	var gotTitle, gotBody string
+	u := &Updater{
+		GitOps: gitOps,
+		Provider: &mocks.MockGitProvider{
+			CreatePRFunc: func(ctx context.Context, p internal.NewPR) (*internal.PR, error) {
+				gotTitle, gotBody = p.Title, p.Body
+				return &internal.PR{Number: 3, HeadRef: p.Head}, nil
+			},
+		},
+		Config: &models.Config{TargetBranch: "main", Workspace: "/repo", CheckImagePins: true},
+		Action: mockAction,
+		defaults: map[string]*chartDefaults{
+			"https://charts.example.com/app@2.0.0": {
+				values: map[string]any{"cache": map[string]any{"image": map[string]any{"tag": "1.6.50"}}},
+			},
+		},
+	}
+
+	files := []models.AppFile{{
+		Path:           "/repo/app.yaml",
+		CurrentVersion: "1.0.0",
+		VersionPath:    "spec.chart.spec.version",
+		Pins:           []models.Pin{{Path: "cache.image.tag", Value: "1.6.45"}},
+	}}
+
+	err := u.handleChartGroup(context.Background(), key, semver.MustParse("2.0.0"), files, osw)
+	assert.NoError(t, err)
+
+	assert.Contains(t, gotTitle, "[1 pin behind]")
+	assert.Contains(t, gotBody, "BEHIND cache.image.tag = 1.6.45 (chart default 1.6.50)")
+}
+
 func TestCreateNewBranch(t *testing.T) {
 	gitOps := new(mocks.MockGitRepo)
 	worktree := new(mocks.MockWorktree)
