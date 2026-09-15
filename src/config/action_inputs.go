@@ -23,6 +23,7 @@ func NewFromInputs(action internal.ActionInterface) (*models.Config, error) {
 	labelsStr := action.GetInput("labels")
 	fileExtStr := action.GetInput("file_extensions")
 	allowRegexFallbackStr := action.GetInput("allow_regex_fallback")
+	deleteBranchStr := action.GetInput("delete_superseded_branches")
 
 	createPr, err := strconv.ParseBool(createPrStr)
 	if err != nil {
@@ -39,6 +40,14 @@ func NewFromInputs(action internal.ActionInterface) (*models.Config, error) {
 		allowRegexFallback, err = strconv.ParseBool(allowRegexFallbackStr)
 		if err != nil {
 			return nil, fmt.Errorf("allow_regex_fallback input is invalid: %w", err)
+		}
+	}
+
+	deleteBranch := false
+	if strings.TrimSpace(deleteBranchStr) != "" {
+		deleteBranch, err = strconv.ParseBool(deleteBranchStr)
+		if err != nil {
+			return nil, fmt.Errorf("delete_superseded_branches input is invalid: %w", err)
 		}
 	}
 
@@ -118,6 +127,7 @@ func NewFromInputs(action internal.ActionInterface) (*models.Config, error) {
 	action.Debugf("sources_file: %s", sourcesFile)
 	action.Debugf("scope: %s", scope)
 	action.Debugf("repo_credentials: %d configured", len(repoCreds))
+	action.Debugf("delete_superseded_branches: %v", deleteBranch)
 
 	c := models.Config{
 		SkipPreRelease:     skipPreRelease,
@@ -138,6 +148,7 @@ func NewFromInputs(action internal.ActionInterface) (*models.Config, error) {
 		SourcesFile:        sourcesFile,
 		Scope:              scope,
 		RepoCreds:          repoCreds,
+		DeleteBranch:       deleteBranch,
 	}
 	return &c, nil
 }

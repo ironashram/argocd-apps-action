@@ -56,6 +56,10 @@ inputs:
     description: "credentials for private chart repositories, one per line: url-prefix|username|password"
     required: false
     default: ""
+  delete_superseded_branches:
+    description: "if true, delete the branch of a pull request closed as superseded by a newer bump"
+    required: false
+    default: "false"
 runs:
   using: composite
   steps:
@@ -89,5 +93,6 @@ runs:
         INPUT_SOURCES_FILE: ${{ inputs.sources_file }}
         INPUT_SCOPE: ${{ inputs.scope }}
         INPUT_REPO_CREDENTIALS: ${{ inputs.repo_credentials }}
+        INPUT_DELETE_SUPERSEDED_BRANCHES: ${{ inputs.delete_superseded_branches }}
       shell: bash
       run: argocd-apps-action

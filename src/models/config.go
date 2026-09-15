@@ -25,4 +25,5 @@ type Config struct {
 	SourcesFile        string
 	Scope              string
 	RepoCreds          []RepoCredential
+	DeleteBranch       bool
 }

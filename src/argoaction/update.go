@@ -14,6 +14,8 @@ type Updater struct {
 	Config   *models.Config
 	Action   internal.ActionInterface
 	Sources  *models.SourcesConfig
+
+	openPRs []internal.PR
 }
 
 func StartUpdate(ctx context.Context, cfg *models.Config, action internal.ActionInterface) error {
