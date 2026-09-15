@@ -30,9 +30,7 @@ func TestProcessChartGroup_NewerVersion_CreatePrDisabled(t *testing.T) {
 	defer httpmock.DeactivateAndReset()
 
 	entries := models.Index{
-		Entries: map[string][]struct {
-			Version string `yaml:"version"`
-		}{
+		Entries: map[string][]models.IndexEntry{
 			"chart1": {{Version: "0.9.0"}, {Version: "0.8.0"}},
 		},
 	}
@@ -95,9 +93,7 @@ func TestProcessChartGroup_NonSemverVersionsSkipped(t *testing.T) {
 	defer httpmock.DeactivateAndReset()
 
 	entries := models.Index{
-		Entries: map[string][]struct {
-			Version string `yaml:"version"`
-		}{
+		Entries: map[string][]models.IndexEntry{
 			"mychart": {
 				{Version: "latest"},
 				{Version: "stable"},
@@ -137,9 +133,7 @@ func TestProcessChartGroup_NoBumpWhenAllAhead(t *testing.T) {
 	defer httpmock.DeactivateAndReset()
 
 	entries := models.Index{
-		Entries: map[string][]struct {
-			Version string `yaml:"version"`
-		}{
+		Entries: map[string][]models.IndexEntry{
 			"chart1": {{Version: "1.0.0"}},
 		},
 	}
@@ -173,9 +167,7 @@ func TestProcessChartGroup_OnlyFixedVersionsBumped(t *testing.T) {
 	defer httpmock.DeactivateAndReset()
 
 	entries := models.Index{
-		Entries: map[string][]struct {
-			Version string `yaml:"version"`
-		}{
+		Entries: map[string][]models.IndexEntry{
 			"chart1": {{Version: "7.0.0"}},
 		},
 	}

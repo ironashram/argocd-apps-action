@@ -9,6 +9,7 @@ import (
 type MockGitProvider struct {
 	ListOpenPRsFunc  func(ctx context.Context) ([]internal.PR, error)
 	CreatePRFunc     func(ctx context.Context, p internal.NewPR) (*internal.PR, error)
+	UpdatePRFunc     func(ctx context.Context, number int, title, body string) error
 	RefreshPRFunc    func(ctx context.Context, number int) error
 	ClosePRFunc      func(ctx context.Context, number int, comment string) error
 	DeleteBranchFunc func(ctx context.Context, branch string) error
@@ -22,6 +23,13 @@ func (m *MockGitProvider) ListOpenPRs(ctx context.Context) ([]internal.PR, error
 		return m.ListOpenPRsFunc(ctx)
 	}
 	return nil, nil
+}
+
+func (m *MockGitProvider) UpdatePR(ctx context.Context, number int, title, body string) error {
+	if m.UpdatePRFunc != nil {
+		return m.UpdatePRFunc(ctx, number, title, body)
+	}
+	return nil
 }
 
 func (m *MockGitProvider) ClosePR(ctx context.Context, number int, comment string) error {

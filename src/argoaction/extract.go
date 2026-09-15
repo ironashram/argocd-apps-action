@@ -22,11 +22,15 @@ var multiSourceRe = regexp.MustCompile(`(?m)^\s+sources:\s*$`)
 func argocdPreset(regexFallback bool) *models.SourcesConfig {
 	return &models.SourcesConfig{
 		Charts: []models.ChartRule{{
-			Files:         []string{"*"},
-			ChartPath:     "spec.source.chart",
-			VersionPath:   "spec.source.targetRevision",
-			URLPath:       "spec.source.repoURL",
-			RegexFallback: regexFallback,
+			Files:              []string{"*"},
+			ChartPath:          "spec.source.chart",
+			VersionPath:        "spec.source.targetRevision",
+			URLPath:            "spec.source.repoURL",
+			RegexFallback:      regexFallback,
+			ValuesPath:         "spec.source.helm.valuesObject",
+			ValuesStringPath:   "spec.source.helm.values",
+			ParametersPath:     "spec.source.helm.parameters",
+			FileParametersPath: "spec.source.helm.fileParameters",
 		}},
 	}
 }
@@ -49,6 +53,7 @@ func fluxPreset() *models.SourcesConfig {
 					NamePath:      "spec.chart.spec.sourceRef.name",
 					NamespacePath: "spec.chart.spec.sourceRef.namespace",
 				},
+				ValuesPath: "spec.values",
 			},
 			{
 				Files:       []string{"*"},
@@ -153,6 +158,23 @@ func (u *Updater) collectCandidates(dir string, osw internal.OSInterface) (map[m
 		}
 	}
 
+	// An overlay may hold the version while its values sit in a base file.
+	identityPins := map[string][]models.Pin{}
+	for _, f := range files {
+		for _, doc := range f.docs {
+			name := getString(doc, "metadata.name")
+			if name == "" {
+				continue
+			}
+			pins := collectPins(doc, models.ChartRule{})
+			if len(pins) == 0 {
+				continue
+			}
+			k := getString(doc, "metadata.namespace") + "/" + name
+			identityPins[k] = append(identityPins[k], pins...)
+		}
+	}
+
 	for _, f := range files {
 		matched := false
 
@@ -188,6 +210,7 @@ func (u *Updater) collectCandidates(dir string, osw internal.OSInterface) (map[m
 					CurrentVersion: ver,
 					VersionPath:    c.VersionPath,
 					DocIndex:       di,
+					Pins:           pinsFor(doc, c, identityPins),
 				})
 				matched = true
 			}

@@ -133,7 +133,7 @@ func TestHandleChartGroup_Scope(t *testing.T) {
 		}
 
 		files := []models.AppFile{{Path: "/repo/app.yaml", CurrentVersion: "1.0.0", VersionPath: "spec.chart.spec.version"}}
-		err := u.handleChartGroup(context.Background(), "mychart", semver.MustParse("2.0.0"), files, osw)
+		err := u.handleChartGroup(context.Background(), models.ChartRef{Chart: "mychart"}, semver.MustParse("2.0.0"), files, osw)
 
 		assert.NoError(t, err)
 		assert.Equal(t, wantBranch, gotBranch)
@@ -191,7 +191,7 @@ func TestHandleChartGroup_DeletesSupersededBranchesOnlyWhenEnabled(t *testing.T)
 		}
 
 		files := []models.AppFile{{Path: "/repo/app.yaml", CurrentVersion: "1.0.0", VersionPath: "spec.chart.spec.version"}}
-		err := u.handleChartGroup(context.Background(), "netbox", semver.MustParse("8.3.63"), files, osw)
+		err := u.handleChartGroup(context.Background(), models.ChartRef{Chart: "netbox"}, semver.MustParse("8.3.63"), files, osw)
 		assert.NoError(t, err)
 		return deleted
 	}
@@ -248,11 +248,39 @@ func TestHandleChartGroup_ClosesSupersededPRs(t *testing.T) {
 	}
 
 	files := []models.AppFile{{Path: "/repo/app.yaml", CurrentVersion: "1.0.0", VersionPath: "spec.chart.spec.version"}}
-	err := u.handleChartGroup(context.Background(), "netbox", semver.MustParse("8.3.63"), files, osw)
+	err := u.handleChartGroup(context.Background(), models.ChartRef{Chart: "netbox"}, semver.MustParse("8.3.63"), files, osw)
 	assert.NoError(t, err)
 
 	assert.Equal(t, []int{41, 42}, slices.Sorted(maps.Keys(closed)))
 	assert.Contains(t, closed[41], "Superseded by #50")
+}
+
+func TestHandleChartGroup_RefreshRewritesTitleAndBody(t *testing.T) {
+	mockAction := &mocks.MockActionInterface{Inputs: map[string]string{}}
+	mockAction.On("Debugf", mock.Anything, mock.Anything).Maybe()
+	mockAction.On("Infof", mock.Anything, mock.Anything).Maybe()
+
+	var gotNumber int
+	var gotTitle, gotBody string
+	u := &Updater{
+		Provider: &mocks.MockGitProvider{
+			UpdatePRFunc: func(ctx context.Context, number int, title, body string) error {
+				gotNumber, gotTitle, gotBody = number, title, body
+				return nil
+			},
+		},
+		Config:  &models.Config{TargetBranch: "main", Workspace: "/repo"},
+		Action:  mockAction,
+		openPRs: []internal.PR{{Number: 12, HeadRef: "update-netbox-8.3.63", Title: "stale title"}},
+	}
+
+	files := []models.AppFile{{Path: "/repo/app.yaml", CurrentVersion: "8.3.62"}}
+	err := u.handleChartGroup(context.Background(), models.ChartRef{Chart: "netbox"}, semver.MustParse("8.3.63"), files, new(mocks.MockOS))
+
+	assert.NoError(t, err)
+	assert.Equal(t, 12, gotNumber)
+	assert.Equal(t, "chore: bump netbox to version 8.3.63", gotTitle)
+	assert.Contains(t, gotBody, "8.3.62")
 }
 
 func TestCreateNewBranch(t *testing.T) {

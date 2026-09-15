@@ -24,6 +24,7 @@ func NewFromInputs(action internal.ActionInterface) (*models.Config, error) {
 	fileExtStr := action.GetInput("file_extensions")
 	allowRegexFallbackStr := action.GetInput("allow_regex_fallback")
 	deleteBranchStr := action.GetInput("delete_superseded_branches")
+	checkImagePinsStr := action.GetInput("check_image_pins")
 
 	createPr, err := strconv.ParseBool(createPrStr)
 	if err != nil {
@@ -48,6 +49,14 @@ func NewFromInputs(action internal.ActionInterface) (*models.Config, error) {
 		deleteBranch, err = strconv.ParseBool(deleteBranchStr)
 		if err != nil {
 			return nil, fmt.Errorf("delete_superseded_branches input is invalid: %w", err)
+		}
+	}
+
+	checkImagePins := false
+	if strings.TrimSpace(checkImagePinsStr) != "" {
+		checkImagePins, err = strconv.ParseBool(checkImagePinsStr)
+		if err != nil {
+			return nil, fmt.Errorf("check_image_pins input is invalid: %w", err)
 		}
 	}
 
@@ -128,6 +137,7 @@ func NewFromInputs(action internal.ActionInterface) (*models.Config, error) {
 	action.Debugf("scope: %s", scope)
 	action.Debugf("repo_credentials: %d configured", len(repoCreds))
 	action.Debugf("delete_superseded_branches: %v", deleteBranch)
+	action.Debugf("check_image_pins: %v", checkImagePins)
 
 	c := models.Config{
 		SkipPreRelease:     skipPreRelease,
@@ -149,6 +159,7 @@ func NewFromInputs(action internal.ActionInterface) (*models.Config, error) {
 		Scope:              scope,
 		RepoCreds:          repoCreds,
 		DeleteBranch:       deleteBranch,
+		CheckImagePins:     checkImagePins,
 	}
 	return &c, nil
 }

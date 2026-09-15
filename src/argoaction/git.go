@@ -181,7 +181,8 @@ func (u *Updater) closeSupersededPRs(ctx context.Context, prefix, chart string, 
 	}
 }
 
-func (u *Updater) handleChartGroup(ctx context.Context, chart string, newest *semver.Version, files []models.AppFile, osw internal.OSInterface) error {
+func (u *Updater) handleChartGroup(ctx context.Context, key models.ChartRef, newest *semver.Version, files []models.AppFile, osw internal.OSInterface) error {
+	chart := key.Chart
 	prefix := "update-"
 	summary := "chore: bump " + chart + " to version " + newest.String()
 	if u.Config.Scope != "" {
@@ -189,6 +190,10 @@ func (u *Updater) handleChartGroup(ctx context.Context, chart string, newest *se
 		summary += " (" + u.Config.Scope + ")"
 	}
 	branchName := prefix + chart + "-" + newest.String()
+
+	scan := u.scanChartPins(ctx, key, newest.String(), files)
+	summary += scan.titleSuffix()
+	body := buildPRBody(chart, newest, files, u.Config.Workspace) + scan.bodySection(chart, newest.String())
 
 	if existing := u.findExistingPR(branchName); existing != nil {
 		err := u.Provider.RefreshPR(ctx, existing.Number)
@@ -199,6 +204,9 @@ func (u *Updater) handleChartGroup(ctx context.Context, chart string, newest *se
 			u.Action.Infof("PR #%d already up to date with %s", existing.Number, u.Config.TargetBranch)
 		default:
 			u.Action.Infof("PR #%d refresh failed: %v", existing.Number, err)
+		}
+		if err := u.Provider.UpdatePR(ctx, existing.Number, summary, body); err != nil {
+			u.Action.Infof("PR #%d could not be rewritten: %v", existing.Number, err)
 		}
 		u.closeSupersededPRs(ctx, prefix, chart, newest, existing.Number)
 		return nil

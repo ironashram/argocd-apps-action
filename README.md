@@ -116,6 +116,24 @@ charts:
 | `scope` | `""` | Name distinguishing this run from other runs on the same repo. Goes into the branch name, the PR title and the commit message. |
 | `repo_credentials` | `""` | Credentials for private chart repositories, one per line: `url-prefix\|username\|password`. Longest matching prefix wins. Works for both HTTP repos (basic auth) and OCI registries. |
 | `delete_superseded_branches` | `false` | Delete the branch of a pull request that was closed as superseded by a newer bump. |
+| `check_image_pins` | `false` | Compare image tags overridden in chart values against the new chart version's defaults and report them in the pull request. |
+
+## Image Pins
+
+An image tag overridden in chart values goes stale silently once the chart's own default catches up, so the bump claims an upgrade the override holds back. With `check_image_pins` enabled, each bump compares the overrides against the defaults of the version it bumps to:
+
+```
+Image pins checked against loki 7.4.0 defaults:
+- BEHIND    memcached.image.tag = 1.6.45-alpine (chart default 1.6.50-alpine)
+- REDUNDANT memcachedExporter.image.tag = v0.17.0 (matches chart default)
+- AHEAD     foo.image.tag = 2.0.1 (chart default 2.0.0)
+```
+
+The title gains `[1 pin behind, 1 redundant]` for the actionable states only.
+
+Overrides are found by shape, any `image` mapping with a `tag` or `digest` plus the `image: repository:tag` form, in `spec.values` for Flux and in `valuesObject`, `values` or `parameters` for ArgoCD. They are matched to a release by name and namespace across all scanned files, since an overlay may hold the version while its values sit in a base file.
+
+A pin is judged only where the chart defines the same path. Tags compare by their numeric part and only when the variant suffix matches, so `1.6.45-alpine` is never ordered against `1.6.45-debian`. List entries and regex-extracted files are not inspected. Anything unresolved is logged, never reported, and never fails the bump.
 
 ## Superseded Pull Requests
 
