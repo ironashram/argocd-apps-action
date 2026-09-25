@@ -190,8 +190,7 @@ func (u *Updater) collectCandidates(dir string, osw internal.OSInterface) (map[m
 				}
 			}
 			if !matched {
-				u.Action.Debugf("Error reading and parsing YAML %s: %v", f.path, f.decErr)
-				errs = append(errs, f.decErr)
+				u.Action.Infof("Skipping %s: not valid YAML and no chart source found: %v", f.path, f.decErr)
 			}
 			continue
 		}
