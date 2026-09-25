@@ -246,3 +246,47 @@ func TestCollectCandidates_GroupsByChartAndRepo(t *testing.T) {
 	assert.Len(t, candidates[fooKey], 2)
 	assert.Len(t, candidates[barKey], 1)
 }
+
+func TestCollectCandidates_TemplatedLocalAppSkipped(t *testing.T) {
+	dir := t.TempDir()
+
+	if err := os.WriteFile(dir+"/chart.yaml", []byte(`spec:
+  source:
+    chart: foo
+    repoURL: https://charts.example.com
+    targetRevision: 1.0.0
+`), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(dir+"/local.yaml", []byte(`spec:
+  source:
+    repoURL: https://github.com/example/repo.git
+    path: charts/local
+    targetRevision: main
+    helm:
+      valuesObject:
+        egress:
+          - to:
+              {{- range .Values.nodes }}
+              - ipBlock:
+                  cidr: {{ . }}/32
+              {{- end }}
+`), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	mockAction := &mocks.MockActionInterface{Inputs: map[string]string{}}
+	mockAction.On("Debugf", mock.Anything, mock.Anything).Maybe()
+	mockAction.On("Infof", mock.Anything, mock.Anything).Once()
+
+	u := &Updater{
+		Config: &models.Config{FileExtensions: []string{".yaml"}, AllowRegexFallback: true},
+		Action: mockAction,
+	}
+
+	candidates, errs := u.collectCandidates(dir, &internal.OSWrapper{})
+	assert.Empty(t, errs)
+	assert.Len(t, candidates, 1)
+	assert.Len(t, candidates[models.ChartRef{RepoURL: "https://charts.example.com", Chart: "foo"}], 1)
+	mockAction.AssertExpectations(t)
+}
