@@ -10,7 +10,7 @@ require (
 	github.com/sethvargo/go-githubactions v1.4.0
 	github.com/stretchr/testify v1.12.1
 	gopkg.in/yaml.v3 v3.0.1
-	oras.land/oras-go/v2 v2.6.4
+	oras.land/oras-go/v2 v2.7.0
 	sigs.k8s.io/yaml v1.6.0
 )
 
